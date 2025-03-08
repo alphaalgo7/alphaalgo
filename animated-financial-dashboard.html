@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px;
+      background-color: #f9f9f9;
+      transition: background-color 1s ease;
+    }
+    .dashboard {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeIn 1s forwards 0.2s;
+    }
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .header {
+      background: linear-gradient(135deg, #1a3a5f 0%, #2a5788 100%);
+      color: white;
+      padding: 25px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 80%);
+      animation: shimmer 5s infinite linear;
+    }
+    @keyframes shimmer {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      position: relative;
+      z-index: 1;
+    }
+    .content {
+      padding: 25px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      animation: slideInFromLeft 0.8s ease-out forwards;
+      animation-delay: 0.4s;
+      opacity: 0;
+    }
+    @keyframes slideInFromLeft {
+      from {
+        transform: translateX(-20px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    th {
+      background-color: #f2f2f2;
+      padding: 14px;
+      text-align: left;
+      border-bottom: 2px solid #ddd;
+      font-weight: 600;
+    }
+    td {
+      padding: 14px;
+      border-bottom: 1px solid #ddd;
+      transition: background-color 0.3s;
+    }
+    tr {
+      position: relative;
+    }
+    tr:hover {
+      background-color: #f5f8ff;
+    }
+    tr:hover td {
+      transform: translateX(5px);
+    }
+    td {
+      transition: transform 0.2s ease-out;
+    }
+    .metric-name {
+      font-weight: 500;
+    }
+    .total-row {
+      font-weight: bold;
+      background-color: #f2f2f2;
+    }
+    .positive {
+      color: #28a745;
+      position: relative;
+    }
+    .positive::after {
+      content: '↑';
+      margin-left: 5px;
+      opacity: 0;
+      animation: fadeInChar 0.5s forwards 1.5s;
+    }
+    .negative {
+      color: #dc3545;
+      position: relative;
+    }
+    .negative::after {
+      content: '↓';
+      margin-left: 5px;
+      opacity: 0;
+      animation: fadeInChar 0.5s forwards 1.5s;
+    }
+    @keyframes fadeInChar {
+      to { opacity: 1; }
+    }
+    .roi-row {
+      font-weight: bold;
+      background-color: #e6f7e6;
+    }
+    .cum-roi-row {
+      font-weight: bold;
+      background-color: #e2f0d9;
+    }
+    .footer {
+      background: linear-gradient(135deg, #e6f0fa 0%, #d4e4f7 100%);
+      padding: 20px;
+      text-align: center;
+      font-weight: bold;
+      border-top: 1px solid #ddd;
+      animation: pulseHighlight 2s infinite alternate;
+    }
+    @keyframes pulseHighlight {
+      from { background-position: 0% 50%; }
+      to { background-position: 100% 50%; }
+    }
+    .chart-container {
+      margin-top: 30px;
+      height: 300px;
+      width: 100%;
+      opacity: 0;
+      animation: fadeIn 1s forwards 1s;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      border-radius: 8px;
+      padding: 15px;
+      background-color: white;
+    }
+    .section-title {
+      margin-top: 30px;
+      margin-bottom: 15px;
+      color: #1a3a5f;
+      font-weight: 600;
+      position: relative;
+      padding-left: 15px;
+      opacity: 0;
+      animation: fadeIn 0.5s forwards 0.8s;
+    }
+    .section-title::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 5px;
+      background-color: #1a3a5f;
+      border-radius: 2px;
+    }
+    .highlight {
+      position: relative;
+      overflow: hidden;
+    }
+    .highlight::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.8) 50%, rgba(255,255,255,0) 100%);
+      transform: translateX(-100%);
+      animation: sweep 3s 2s infinite;
+    }
+    @keyframes sweep {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3498db;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+      display: none;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+      opacity: 0;
+      animation: fadeIn 0.5s forwards 1.5s;
+    }
+    .btn {
+      padding: 8px 16px;
+      background: #1a3a5f;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    .btn:hover {
+      background: #2a5788;
+      transform: translateY(-2px);
+    }
+    .btn:active {
+      transform: translateY(0);
+    }
+    .tooltip {
+      position: absolute;
+      background-color: rgba(0,0,0,0.8);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 14px;
+      z-index: 100;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    canvas {
+      transition: all 0.3s ease;
+    }
+    canvas:hover {
+      transform: scale(1.02);
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard">
+    <div class="header">
+      <h1>Financial Performance Dashboard (Dec 2024 - Mar 2025)</h1>
+    </div>
+    <div class="content">
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>Dec-24</th>
+            <th>Jan-25</th>
+            <th>Feb-25</th>
+            <th>Mar-25</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="metric-name">First Model Revenue</td>
+            <td>78,371</td>
+            <td>147,777</td>
+            <td>178,196</td>
+            <td>24,502</td>
+          </tr>
+          <tr>
+            <td class="metric-name">Max DD</td>
+            <td class="negative">40,331</td>
+            <td class="negative">47,723</td>
+            <td>0</td>
+            <td>0</td>
+          </tr>
+          <tr>
+            <td class="metric-name">2nd Model Revenue</td>
+            <td>-</td>
+            <td class="negative">37,950</td>
+            <td class="negative">33,184</td>
+            <td class="negative">1,549</td>
+          </tr>
+          <tr>
+            <td class="metric-name">Max DD</td>
+            <td>-</td>
+            <td class="negative">21,049</td>
+            <td class="negative">29,378</td>
+            <td>0</td>
+          </tr>
+          <tr>
+            <td class="metric-name">3rd Model Revenue</td>
+            <td class="positive">375,620</td>
+            <td class="positive">226,862</td>
+            <td class="positive">209,732</td>
+            <td class="positive">63,702</td>
+          </tr>
+          <tr>
+            <td class="metric-name">Max DD</td>
+            <td class="negative">10,804</td>
+            <td class="negative">40,331</td>
+            <td class="negative">43,195</td>
+            <td>-</td>
+          </tr>
+          <tr class="total-row highlight">
+            <td>TOTAL</td>
+            <td>453,991</td>
+            <td>468,639</td>
+            <td>387,928</td>
+            <td>88,204</td>
+          </tr>
+          <tr>
+            <td class="metric-name">DD</td>
+            <td>51,135.00</td>
+            <td>88,054.00</td>
+            <td>43,195.25</td>
+            <td>0.00</td>
+          </tr>
+          <tr>
+            <td class="metric-name">DD %</td>
+            <td>2.6%</td>
+            <td>4.4%</td>
+            <td>2.2%</td>
+            <td>0.0%</td>
+          </tr>
+          <tr class="roi-row">
+            <td>ROI %</td>
+            <td>22.7%</td>
+            <td>23.4%</td>
+            <td>19.4%</td>
+            <td>4.4%</td>
+          </tr>
+          <tr class="cum-roi-row highlight">
+            <td>CUM ROI</td>
+            <td>453,991</td>
+            <td>922,630</td>
+            <td>1,310,558</td>
+            <td>1,398,762</td>
+          </tr>
+          <tr class="cum-roi-row">
+            <td>CUM ROI %</td>
+            <td>22.7%</td>
+            <td>46.1%</td>
+            <td>65.5%</td>
+            <td>69.9%</td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <h3 class="section-title">Monthly ROI Performance</h3>
+      <div class="chart-container" id="roiChart"></div>
+      
+      <h3 class="section-title">Cumulative ROI Growth</h3>
+      <div class="chart-container" id="cumRoiChart"></div>
+      
+      <div class="controls">
+        <button class="btn" id="animateBtn">Replay Animations</button>
+        <button class="btn" id="highlightBtn">Highlight Key Metrics</button>
+        <button class="btn" id="toggleThemeBtn">Toggle Dark/Light Theme</button>
+      </div>
+    </div>
+    <div class="footer">
+      Overall Performance: 69.9% Cumulative ROI
+    </div>
+  </div>
+  
+  <div class="tooltip" id="tooltip"></div>
+  <div class="loader" id="loader"></div>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+  <script>
+    // Wait for complete page load
+    document.addEventListener('DOMContentLoaded', function() {
+      // Data for the charts
+      const months = ['Dec-24', 'Jan-25', 'Feb-25', 'Mar-25'];
+      const roiData = [22.7, 23.4, 19.4, 4.4];
+      const cumRoiData = [22.7, 46.1, 65.5, 69.9];
+      
+      // Initialize tooltips
+      const tooltip = document.getElementById('tooltip');
+      
+      // Table cell hover effect with data points
+      const tableCells = document.querySelectorAll('table td:not(:first-child)');
+      tableCells.forEach(cell => {
+        cell.addEventListener('mouseover', function(e) {
+          const value = this.textContent;
+          tooltip.textContent = value;
+          tooltip.style.opacity = 1;
+          tooltip.style.left = e.pageX + 10 + 'px';
+          tooltip.style.top = e.pageY - 20 + 'px';
+        });
+        
+        cell.addEventListener('mouseout', function() {
+          tooltip.style.opacity = 0;
+        });
+      });
+      
+      // Sequential animation for table rows
+      const tableRows = document.querySelectorAll('table tbody tr');
+      tableRows.forEach((row, index) => {
+        row.style.opacity = 0;
+        row.style.animation = `fadeIn 0.5s forwards ${0.6 + index * 0.1}s`;
+      });
+      
+      // ROI Chart with animation
+      const roiCtx = document.createElement('canvas');
+      roiCtx.id = 'roiChartCanvas';
+      document.getElementById('roiChart').appendChild(roiCtx);
+      
+      const roiChart = new Chart(roiCtx, {
+        type: 'bar',
+        data: {
+          labels: months,
+          datasets: [{
+            label: 'Monthly ROI %',
+            data: roiData,
+            backgroundColor: [
+              'rgba(65, 105, 225, 0.7)',
+              'rgba(65, 105, 225, 0.7)',
+              'rgba(65, 105, 225, 0.7)',
+              'rgba(65, 105, 225, 0.7)'
+            ],
+            borderColor: [
+              'rgba(65, 105, 225, 1)',
+              'rgba(65, 105, 225, 1)',
+              'rgba(65, 105, 225, 1)',
+              'rgba(65, 105, 225, 1)'
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: {
+            duration: 2000,
+            easing: 'easeOutQuart',
+            delay: function(context) {
+              return context.dataIndex * 300;
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'ROI %'
+              }
+            }
+          },
+          plugins: {
+            title: {
+              display: true,
+              text: 'Monthly Return on Investment (%)'
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `ROI: ${context.raw}%`;
+                }
+              }
+            }
+          }
+        }
+      });
+      
+      // Cumulative ROI Chart with animation
+      const cumRoiCtx = document.createElement('canvas');
+      cumRoiCtx.id = 'cumRoiChartCanvas';
+      document.getElementById('cumRoiChart').appendChild(cumRoiCtx);
+      
+      const cumRoiChart = new Chart(cumRoiCtx, {
+        type: 'line',
+        data: {
+          labels: months,
+          datasets: [{
+            label: 'Cumulative ROI %',
+            data: cumRoiData,
+            backgroundColor: 'rgba(46, 139, 87, 0.2)',
+            borderColor: 'rgba(46, 139, 87, 1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            pointBackgroundColor: 'rgba(46, 139, 87, 1)'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: {
+            duration: 2500,
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Cumulative ROI %'
+              }
+            }
+          },
+          plugins: {
+            title: {
+              display: true,
+              text: 'Cumulative Return on Investment Growth (%)'
+            }
+          }
+        }
+      });
+      
+      // Animation replay button
+      document.getElementById('animateBtn').addEventListener('click', function() {
+        // Show loader
+        document.getElementById('loader').style.display = 'block';
+        
+        // Re-animate table
+        tableRows.forEach((row, index) => {
+          row.style.opacity = 0;
+          setTimeout(() => {
+            row.style.opacity = 1;
+            row.style.animation = `fadeIn 0.5s forwards`;
+          }, 500 + index * 100);
+        });
+        
+        // Re-animate charts
+        setTimeout(() => {
+          roiChart.reset();
+          roiChart.update();
+          
+          setTimeout(() => {
+            cumRoiChart.reset();
+            cumRoiChart.update();
+            document.getElementById('loader').style.display = 'none';
+          }, 1000);
+        }, 2000);
+      });
+      
+      // Highlight key metrics button
+      document.getElementById('highlightBtn').addEventListener('click', function() {
+        // Highlight important rows with pulse animation
+        const highlightRows = document.querySelectorAll('.roi-row, .cum-roi-row');
+        highlightRows.forEach(row => {
+          row.style.animation = 'none';
+          row.offsetHeight; // Trigger reflow
+          row.style.animation = 'pulseHighlight 1s 3';
+          row.style.backgroundColor = '#ffffdd';
+          setTimeout(() => {
+            row.style.backgroundColor = row.classList.contains('roi-row') ? '#e6f7e6' : '#e2f0d9';
+          }, 3000);
+        });
+        
+        // Highlight maximum values in charts
+        const maxRoiIndex = roiData.indexOf(Math.max(...roiData));
+        const roiDatasetMeta = roiChart.getDatasetMeta(0);
+        const roiElement = roiDatasetMeta.data[maxRoiIndex];
+        
+        roiChart.update();
+      });
+      
+      // Toggle dark/light theme
+      document.getElementById('toggleThemeBtn').addEventListener('click', function() {
+        const body = document.body;
+        const dashboard = document.querySelector('.dashboard');
+        const isDark = body.style.backgroundColor === 'rgb(30, 30, 40)';
+        
+        if (!isDark) {
+          // Switch to dark
+          body.style.backgroundColor = 'rgb(30, 30, 40)';
+          dashboard.style.backgroundColor = 'rgb(45, 45, 60)';
+          dashboard.style.color = 'white';
+          document.querySelectorAll('td, th').forEach(cell => {
+            cell.style.borderColor = 'rgb(70, 70, 90)';
+          });
+          document.querySelectorAll('.chart-container').forEach(container => {
+            container.style.backgroundColor = 'rgb(45, 45, 60)';
+          });
+          
+          // Update chart colors for dark theme
+          roiChart.options.scales.y.grid = { color: 'rgba(255, 255, 255, 0.1)' };
+          roiChart.options.scales.x.grid = { color: 'rgba(255, 255, 255, 0.1)' };
+          roiChart.options.scales.y.ticks = { color: 'rgba(255, 255, 255, 0.7)' };
+          roiChart.options.scales.x.ticks = { color: 'rgba(255, 255, 255, 0.7)' };
+          roiChart.update();
+          
+          cumRoiChart.options.scales.y.grid = { color: 'rgba(255, 255, 255, 0.1)' };
+          cumRoiChart.options.scales.x.grid = { color: 'rgba(255, 255, 255, 0.1)' };
+          cumRoiChart.options.scales.y.ticks = { color: 'rgba(255, 255, 255, 0.7)' };
+          cumRoiChart.options.scales.x.ticks = { color: 'rgba(255, 255, 255, 0.7)' };
+          cumRoiChart.update();
+        } else {
+          // Switch to light
+          body.style.backgroundColor = '#f9f9f9';
+          dashboard.style.backgroundColor = 'white';
+          dashboard.style.color = 'black';
+          document.querySelectorAll('td, th').forEach(cell => {
+            cell.style.borderColor = '#ddd';
+          });
+          document.querySelectorAll('.chart-container').forEach(container => {
+            container.style.backgroundColor = 'white';
+          });
+          
+          // Reset chart colors for light theme
+          roiChart.options.scales.y.grid = { color: 'rgba(0, 0, 0, 0.1)' };
+          roiChart.options.scales.x.grid = { color: 'rgba(0, 0, 0, 0.1)' };
+          roiChart.options.scales.y.ticks = { color: 'rgba(0, 0, 0, 0.7)' };
+          roiChart.options.scales.x.ticks = { color: 'rgba(0, 0, 0, 0.7)' };
+          roiChart.update();
+          
+          cumRoiChart.options.scales.y.grid = { color: 'rgba(0, 0, 0, 0.1)' };
+          cumRoiChart.options.scales.x.grid = { color: 'rgba(0, 0, 0, 0.1)' };
+          cumRoiChart.options.scales.y.ticks = { color: 'rgba(0, 0, 0, 0.7)' };
+          cumRoiChart.options.scales.x.ticks = { color: 'rgba(0, 0, 0, 0.7)' };
+          cumRoiChart.update();
+        }
+      });
+      
+      // Add animated data counter effect
+      const numericCells = document.querySelectorAll('td:not(:first-child)');
+      numericCells.forEach(cell => {
+        const finalValue = cell.textContent;
+        if (!isNaN(parseFloat(finalValue.replace(/,/g, '').replace('%', '')))) {
+          const isPercentage = finalValue.includes('%');
+          const numValue = parseFloat(finalValue.replace(/,/g, '').replace('%', ''));
+          
+          // Only animate if it's a significant number
+          if (numValue > 10) {
+            cell.setAttribute('data-value', finalValue);
+            cell.textContent = '0' + (isPercentage ? '%' : '');
+            
+            setTimeout(() => {
+              animateValue(cell, 0, numValue, 1500, isPercentage);
+            }, 1500);
+          }
+        }
+      });
+      
+      function animateValue(element, start, end, duration, isPercentage) {
+        let startTimestamp = null;
+        const step = (timestamp) => {
+          if (!startTimestamp) startTimestamp = timestamp;
+          const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+          const currentValue = Math.floor(progress * (end - start) + start);
+          element.textContent = currentValue.toLocaleString() + (isPercentage ? '%' : '');
+          if (progress < 1) {
+            window.requestAnimationFrame(step);
+          } else {
+            element.textContent = element.getAttribute('data-value');
+          }
+        };
+        window.requestAnimationFrame(step);
+      }
+    });
+  </script>
+</body>
+</html>
