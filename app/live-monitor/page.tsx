@@ -431,6 +431,28 @@ const mockOrders = [
     portfolio: "balanced",
     user: "ACC002",
   },
+  {
+    id: 9,
+    symbol: "INFY",
+    account: "ACC001",
+    buySell: "BUY",
+    pendQty: 0,
+    price: 1550.5,
+    qty: 10,
+    executionStatus: "CANCELLED",
+    tradingAccount: "TA001",
+    orderId: "ORD123464",
+    updateTime: "11:00:00",
+    product: "CNC",
+    exchange: "NSE",
+    fillQty: 0,
+    broker: "ZERODHA",
+    date: "2023-06-15",
+    rejectReason: "User cancelled",
+    strategy: "momentum",
+    portfolio: "aggressive",
+    user: "ACC001",
+  },
 ]
 
 const mockMargin = [
@@ -972,25 +994,41 @@ export default function LiveMonitorPage() {
                   <Activity className="h-5 w-5 text-blue-600" />
                 </div>
               </div>
-              <div className="text-xs text-blue-600/70 mt-2">
-                {((summaryTotals.positionsOpen / summaryTotals.totalPositions) * 100).toFixed(0)}% of total positions
-              </div>
             </CardContent>
           </Card>
 
           <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 dark:border dark:border-amber-800">
             <CardHeader className="pb-2 border-b border-amber-100 dark:border-amber-800/30">
-              <CardTitle className="text-sm font-medium text-amber-700 dark:text-amber-300">Pending Orders</CardTitle>
+              <CardTitle className="text-sm font-medium text-amber-700 dark:text-amber-300">Orders Status</CardTitle>
             </CardHeader>
             <CardContent className="pt-4">
-              <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold text-amber-600">{summaryTotals.ordersPending}</div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-2xl font-bold text-amber-600">{summaryTotals.ordersPending}</div>
                 <div className="p-2 bg-white/50 rounded-full dark:bg-white/10">
                   <Clock className="h-5 w-5 text-amber-600" />
                 </div>
               </div>
-              <div className="text-xs text-amber-600/70 mt-2">
-                {summaryTotals.ordersCompleted} completed, {summaryTotals.ordersRejected} rejected
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-green-600 dark:text-green-400">Successful Orders:</span>
+                  <span className="font-medium text-green-600 dark:text-green-400">
+                    {summaryTotals.ordersCompleted}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-red-600 dark:text-red-400">Rejected Orders:</span>
+                  <span className="font-medium text-red-600 dark:text-red-400">{summaryTotals.ordersRejected}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 dark:text-gray-400">Cancelled Orders:</span>
+                  <span className="font-medium text-gray-600 dark:text-gray-400">
+                    {mockOrders.filter((o) => o.executionStatus === "CANCELLED").length}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center mt-1 pt-1 border-t border-amber-200 dark:border-amber-800/30">
+                  <span className="text-amber-600 dark:text-amber-400 font-medium">Pending Orders:</span>
+                  <span className="font-medium text-amber-600 dark:text-amber-400">{summaryTotals.ordersPending}</span>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1066,7 +1104,7 @@ export default function LiveMonitorPage() {
                 value="manual"
                 className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-blue-400"
               >
-                Manual Close
+                Trade
               </TabsTrigger>
               <TabsTrigger
                 value="margin"
@@ -1378,7 +1416,7 @@ export default function LiveMonitorPage() {
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md">
                       <DialogHeader>
-                        <DialogTitle>Square Off By Account</DialogTitle>
+                        <DialogTitle>Custom Square Off By Account</DialogTitle>
                         <DialogDescription>Square off all positions for a specific account.</DialogDescription>
                       </DialogHeader>
                       <div className="py-4">
@@ -1898,9 +1936,9 @@ export default function LiveMonitorPage() {
             <Card className="border-0 shadow-lg overflow-hidden bg-white/90 backdrop-blur-sm dark:bg-slate-800/90">
               <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-100 dark:from-amber-900/20 dark:to-orange-900/20 dark:border-amber-800/30">
                 <CardTitle className="text-xl font-semibold text-amber-800 dark:text-amber-300">
-                  Manual Close Interface
+                  Trade Interface
                 </CardTitle>
-                <CardDescription>Manually close positions or cancel orders</CardDescription>
+                <CardDescription>Manually execute trades, close positions or cancel orders</CardDescription>
               </CardHeader>
               <CardContent className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

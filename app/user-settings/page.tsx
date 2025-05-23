@@ -9,7 +9,6 @@ import {
   AlertTriangle,
   Filter,
   Trash2,
-  UserPlus,
   LogOut,
   ChevronDown,
   Wallet,
@@ -22,6 +21,7 @@ import {
   CheckCircle,
   Plus,
   Minus,
+  UserPlus,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
