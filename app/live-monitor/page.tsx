@@ -1125,20 +1125,206 @@ export default function LiveMonitorPage() {
                   </CardTitle>
                   <CardDescription>Overview of P&L and positions by user account</CardDescription>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1 bg-white/80 hover:bg-white dark:bg-slate-700/50 dark:hover:bg-slate-700"
-                  onClick={() => {
-                    toast({
-                      title: "Refreshed",
-                      description: "Data has been refreshed successfully",
-                    })
-                  }}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Refresh
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="bg-white/80 hover:bg-white dark:bg-slate-700/50 dark:hover:bg-slate-700"
+                      >
+                        <Filter className="h-4 w-4 mr-1" />
+                        Filter
+                        {(selectedFilter !== "all" ||
+                          selectedStrategy !== "all" ||
+                          selectedPortfolio !== "all" ||
+                          selectedUser !== "all") && <div className="ml-1 w-2 h-2 rounded-full bg-blue-500"></div>}
+                        <ChevronDown className="h-4 w-4 ml-1" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuLabel>Filter By</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setSelectedFilter("all")}>All Accounts</DropdownMenuItem>
+
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel>Strategy</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => setSelectedStrategy("all")}>All Strategies</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSelectedStrategy("momentum")}>Momentum</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSelectedStrategy("meanreversion")}>
+                        Mean Reversion
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSelectedStrategy("volatility")}>Volatility</DropdownMenuItem>
+
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel>Portfolio</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => setSelectedPortfolio("all")}>All Portfolios</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSelectedPortfolio("aggressive")}>Aggressive</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSelectedPortfolio("balanced")}>Balanced</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSelectedPortfolio("conservative")}>
+                        Conservative
+                      </DropdownMenuItem>
+
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel>User</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => setSelectedUser("all")}>All Users</DropdownMenuItem>
+                      {Array.from(new Set(mockUsers.map((user) => user.account))).map((account) => (
+                        <DropdownMenuItem key={account} onClick={() => setSelectedUser(account)}>
+                          {account}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  {(selectedFilter !== "all" ||
+                    selectedStrategy !== "all" ||
+                    selectedPortfolio !== "all" ||
+                    selectedUser !== "all") && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedFilter("all")
+                        setSelectedStrategy("all")
+                        setSelectedPortfolio("all")
+                        setSelectedUser("all")
+                      }}
+                      className="text-xs px-2 h-8"
+                    >
+                      Reset Filters
+                    </Button>
+                  )}
+                  <Dialog open={isSquareOffDialogOpen} onOpenChange={setIsSquareOffDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
+                      >
+                        Square Off All
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Square Off All Positions</DialogTitle>
+                        <DialogDescription>
+                          Are you sure you want to square off all positions? This action cannot be undone.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsSquareOffDialogOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={handleSquareOffAll}
+                          disabled={isLoading}
+                          className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
+                        >
+                          {isLoading ? "Processing..." : "Square Off All"}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                  <Dialog open={isCustomSquareOffDialogOpen} onOpenChange={setIsCustomSquareOffDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="bg-white/80 hover:bg-white dark:bg-slate-700/50 dark:hover:bg-slate-700"
+                      >
+                        Custom Square Off
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Custom Square Off</DialogTitle>
+                        <DialogDescription>
+                          Square off selected positions. Select positions from the table first.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="py-4">
+                        {selectedPositions.length === 0 ? (
+                          <p className="text-yellow-500">
+                            No positions selected. Please select positions from the table.
+                          </p>
+                        ) : (
+                          <p>{selectedPositions.length} positions selected for square off.</p>
+                        )}
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsCustomSquareOffDialogOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={handleCustomSquareOff}
+                          disabled={isLoading || selectedPositions.length === 0}
+                          className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
+                        >
+                          {isLoading ? "Processing..." : "Square Off Selected"}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                  <Dialog open={isAccountSquareOffDialogOpen} onOpenChange={setIsAccountSquareOffDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="bg-white/80 hover:bg-white dark:bg-slate-700/50 dark:hover:bg-slate-700"
+                      >
+                        Square Off By Account
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Custom Square Off By Account</DialogTitle>
+                        <DialogDescription>Square off all positions for a specific account.</DialogDescription>
+                      </DialogHeader>
+                      <div className="py-4">
+                        <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+                          <SelectTrigger className="bg-white dark:bg-slate-700">
+                            <SelectValue placeholder="Select an account" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from(new Set(mockPositions.map((p) => p.account))).map((account) => (
+                              <SelectItem key={account} value={account}>
+                                {account}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAccountSquareOffDialogOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={handleSquareOffByAccount}
+                          disabled={isLoading || !selectedAccount}
+                          className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
+                        >
+                          {isLoading ? "Processing..." : "Square Off Account"}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1 bg-white/80 hover:bg-white dark:bg-slate-700/50 dark:hover:bg-slate-700"
+                    onClick={() => {
+                      toast({
+                        title: "Refreshed",
+                        description: "Data has been refreshed successfully",
+                      })
+                    }}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Refresh
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
