@@ -28,9 +28,6 @@ import {
   Filter,
   ChevronUp,
   Edit,
-  TrendingUp,
-  Clock,
-  ArrowRightLeft,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast, Toaster } from "sonner"
@@ -61,41 +58,10 @@ export default function PortfolioList() {
   const [sortBy, setSortBy] = useState("newest")
 
   const [showUserAssignDialog, setShowUserAssignDialog] = useState(false)
-  const [showRetryMechanismDialog, setShowRetryMechanismDialog] = useState(false)
-  const [showProfitLockingDialog, setShowProfitLockingDialog] = useState(false)
-  const [showProfitTrailingDialog, setShowProfitTrailingDialog] = useState(false)
-
   const [selectedPortfolioForUser, setSelectedPortfolioForUser] = useState(null)
-  const [selectedPortfolioForSettings, setSelectedPortfolioForSettings] = useState(null)
   const [availableUsers, setAvailableUsers] = useState([])
   const [selectedUsers, setSelectedUsers] = useState([])
   const [editableSettings, setEditableSettings] = useState({})
-
-  // Retry mechanism settings
-  const [retrySettings, setRetrySettings] = useState({
-    entryOrderRetry: false,
-    entryRetryCount: 3,
-    entryRetryWaitSeconds: 5,
-    entryMaxWaitSeconds: 30,
-    exitOrderRetry: false,
-    exitRetryCount: 3,
-    exitRetryWaitSeconds: 5,
-    exitMaxWaitSeconds: 30,
-  })
-
-  // Profit locking settings
-  const [profitLockingSettings, setProfitLockingSettings] = useState({
-    enabled: false,
-    profitThreshold: 1000,
-    minimumProfitLock: 500,
-  })
-
-  // Profit trailing settings
-  const [profitTrailingSettings, setProfitTrailingSettings] = useState({
-    enabled: false,
-    increaseBy: 500,
-    trailBy: 200,
-  })
 
   // Load portfolios from localStorage on component mount
   useEffect(() => {
@@ -145,26 +111,8 @@ export default function PortfolioList() {
                 settings: portfolioData.settings || {
                   maxProfit: 0,
                   maxLoss: 0,
-                  profitLocking: {
-                    enabled: false,
-                    profitThreshold: 1000,
-                    minimumProfitLock: 500,
-                  },
-                  retryMechanism: {
-                    entryOrderRetry: false,
-                    entryRetryCount: 3,
-                    entryRetryWaitSeconds: 5,
-                    entryMaxWaitSeconds: 30,
-                    exitOrderRetry: false,
-                    exitRetryCount: 3,
-                    exitRetryWaitSeconds: 5,
-                    exitMaxWaitSeconds: 30,
-                  },
-                  profitTrailing: {
-                    enabled: false,
-                    increaseBy: 500,
-                    trailBy: 200,
-                  },
+                  profitLocking: false,
+                  entryRetry: 0,
                   assignedUsers: [],
                   trailingSettings: {
                     enabled: false,
@@ -273,119 +221,17 @@ export default function PortfolioList() {
     setShowUserAssignDialog(true)
   }
 
-  // Handle retry mechanism dialog
-  const handleRetryMechanism = (portfolioId, e) => {
-    if (e) e.stopPropagation()
-    setSelectedPortfolioForSettings(portfolioId)
-
-    // Load current retry settings
-    const portfolio = portfolios.find((p) => p.id === portfolioId)
-    setRetrySettings(
-      portfolio.settings.retryMechanism || {
-        entryOrderRetry: false,
-        entryRetryCount: 3,
-        entryRetryWaitSeconds: 5,
-        entryMaxWaitSeconds: 30,
-        exitOrderRetry: false,
-        exitRetryCount: 3,
-        exitRetryWaitSeconds: 5,
-        exitMaxWaitSeconds: 30,
-      },
-    )
-
-    setShowRetryMechanismDialog(true)
-  }
-
-  // Handle profit locking dialog
-  const handleProfitLocking = (portfolioId, e) => {
-    if (e) e.stopPropagation()
-    setSelectedPortfolioForSettings(portfolioId)
-
-    // Load current profit locking settings
-    const portfolio = portfolios.find((p) => p.id === portfolioId)
-    setProfitLockingSettings(
-      portfolio.settings.profitLocking || {
-        enabled: false,
-        profitThreshold: 1000,
-        minimumProfitLock: 500,
-      },
-    )
-
-    setShowProfitLockingDialog(true)
-  }
-
-  // Handle profit trailing dialog
-  const handleProfitTrailing = (portfolioId, e) => {
-    if (e) e.stopPropagation()
-    setSelectedPortfolioForSettings(portfolioId)
-
-    // Load current profit trailing settings
-    const portfolio = portfolios.find((p) => p.id === portfolioId)
-    setProfitTrailingSettings(
-      portfolio.settings.profitTrailing || {
-        enabled: false,
-        increaseBy: 500,
-        trailBy: 200,
-      },
-    )
-
-    setShowProfitTrailingDialog(true)
-  }
-
   // Handle save user assignments
   const handleSaveUserAssignments = () => {
     if (selectedPortfolioForUser) {
-      const portfolio = portfolios.find((p) => p.id === selectedPortfolioForUser)
       const newSettings = {
-        ...portfolio.settings,
+        ...portfolios.find((p) => p.id === selectedPortfolioForUser).settings,
         assignedUsers: selectedUsers,
       }
       savePortfolioSettings(selectedPortfolioForUser, newSettings)
       setShowUserAssignDialog(false)
       setSelectedPortfolioForUser(null)
       setSelectedUsers([])
-    }
-  }
-
-  // Handle save retry mechanism settings
-  const handleSaveRetrySettings = () => {
-    if (selectedPortfolioForSettings) {
-      const portfolio = portfolios.find((p) => p.id === selectedPortfolioForSettings)
-      const newSettings = {
-        ...portfolio.settings,
-        retryMechanism: retrySettings,
-      }
-      savePortfolioSettings(selectedPortfolioForSettings, newSettings)
-      setShowRetryMechanismDialog(false)
-      setSelectedPortfolioForSettings(null)
-    }
-  }
-
-  // Handle save profit locking settings
-  const handleSaveProfitLockingSettings = () => {
-    if (selectedPortfolioForSettings) {
-      const portfolio = portfolios.find((p) => p.id === selectedPortfolioForSettings)
-      const newSettings = {
-        ...portfolio.settings,
-        profitLocking: profitLockingSettings,
-      }
-      savePortfolioSettings(selectedPortfolioForSettings, newSettings)
-      setShowProfitLockingDialog(false)
-      setSelectedPortfolioForSettings(null)
-    }
-  }
-
-  // Handle save profit trailing settings
-  const handleSaveProfitTrailingSettings = () => {
-    if (selectedPortfolioForSettings) {
-      const portfolio = portfolios.find((p) => p.id === selectedPortfolioForSettings)
-      const newSettings = {
-        ...portfolio.settings,
-        profitTrailing: profitTrailingSettings,
-      }
-      savePortfolioSettings(selectedPortfolioForSettings, newSettings)
-      setShowProfitTrailingDialog(false)
-      setSelectedPortfolioForSettings(null)
     }
   }
 
@@ -462,11 +308,12 @@ export default function PortfolioList() {
 
   // Handle create new portfolio
   const handleCreateNew = () => {
-    // Show toast immediately before navigation
-    toast.info("Select strategies to add to a new portfolio")
-
-    // Use direct navigation without setTimeout
+    // Use window.location for a hard redirect to ensure it works
     window.location.href = "/strategies"
+    // Show toast message after a small delay to ensure it appears after navigation starts
+    setTimeout(() => {
+      toast.info("Select strategies to add to a new portfolio")
+    }, 100)
   }
 
   // Handle view portfolio
@@ -724,70 +571,47 @@ export default function PortfolioList() {
                           />
                         </div>
                       </div>
+                      <div>
+                        <Label htmlFor={`entryRetry-${portfolio.id}`} className="text-xs">
+                          Entry Retry
+                        </Label>
+                        <div className="relative">
+                          <RefreshCw className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-amber-500" />
+                          <Input
+                            id={`entryRetry-${portfolio.id}`}
+                            type="number"
+                            value={editableSettings.entryRetry || 0}
+                            onChange={(e) => handleSettingsChange("entryRetry", Number(e.target.value))}
+                            className="pl-8"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id={`profitLocking-${portfolio.id}`}
+                          checked={editableSettings.profitLocking || false}
+                          onCheckedChange={(checked) => handleSettingsChange("profitLocking", checked)}
+                        />
+                        <Label htmlFor={`profitLocking-${portfolio.id}`} className="text-sm">
+                          Profit Locking
+                        </Label>
+                      </div>
                     </div>
 
                     <div className="flex flex-col space-y-3 mt-4">
                       <Button
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleRetryMechanism(portfolio.id, e)
-                        }}
-                        variant="outline"
-                        className="w-full flex justify-between"
-                      >
-                        <div className="flex items-center">
-                          <RefreshCw className="h-4 w-4 mr-2 text-amber-500" />
-                          Retry Mechanism
-                        </div>
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleProfitLocking(portfolio.id, e)
-                        }}
-                        variant="outline"
-                        className="w-full flex justify-between"
-                      >
-                        <div className="flex items-center">
-                          <Lock className="h-4 w-4 mr-2 text-blue-500" />
-                          Profit Locking
-                        </div>
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleProfitTrailing(portfolio.id, e)
-                        }}
-                        variant="outline"
-                        className="w-full flex justify-between"
-                      >
-                        <div className="flex items-center">
-                          <TrendingUp className="h-4 w-4 mr-2 text-green-500" />
-                          Profit Trailing
-                        </div>
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation()
                           handleAssignUser(portfolio.id)
                         }}
                         variant="outline"
-                        className="w-full flex justify-between"
+                        className="w-full"
                       >
-                        <div className="flex items-center">
-                          <Users className="h-4 w-4 mr-2 text-indigo-500" />
-                          Assign Users
-                        </div>
-                        <ChevronRight className="h-4 w-4" />
+                        <Users className="h-4 w-4 mr-2" />
+                        Assign Users with Multiplier
                       </Button>
 
-                      <div className="flex gap-2 pt-2">
+                      <div className="flex gap-2">
                         <Button
                           onClick={(e) => {
                             e.stopPropagation()
@@ -829,15 +653,13 @@ export default function PortfolioList() {
                       <Lock className="h-4 w-4 mr-2 text-blue-500" />
                       <span className="text-muted-foreground">Profit Lock:</span>
                       <span className="ml-auto font-medium">
-                        {portfolio.settings.profitLocking?.enabled ? "Enabled" : "Disabled"}
+                        {portfolio.settings.profitLocking ? "Enabled" : "Disabled"}
                       </span>
                     </div>
                     <div className="flex items-center text-sm">
-                      <TrendingUp className="h-4 w-4 mr-2 text-green-500" />
-                      <span className="text-muted-foreground">Profit Trail:</span>
-                      <span className="ml-auto font-medium">
-                        {portfolio.settings.profitTrailing?.enabled ? "Enabled" : "Disabled"}
-                      </span>
+                      <RefreshCw className="h-4 w-4 mr-2 text-amber-500" />
+                      <span className="text-muted-foreground">Entry Retry:</span>
+                      <span className="ml-auto font-medium">{portfolio.settings.entryRetry || "0"}</span>
                     </div>
                   </div>
                 )}
@@ -879,19 +701,14 @@ export default function PortfolioList() {
                 </div>
                 {expandedPortfolioId !== portfolio.id && (
                   <div className="flex items-center gap-2">
-                    {portfolio.settings.profitLocking?.enabled && (
-                      <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200">
+                    {portfolio.settings.profitLocking && (
+                      <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">
                         Profit Lock
                       </Badge>
                     )}
-                    {portfolio.settings.profitTrailing?.enabled && (
-                      <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">
-                        Profit Trail
-                      </Badge>
-                    )}
-                    {portfolio.settings.retryMechanism?.entryOrderRetry && (
+                    {portfolio.settings.entryRetry > 0 && (
                       <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200">
-                        Retry
+                        Retry: {portfolio.settings.entryRetry}
                       </Badge>
                     )}
                   </div>
@@ -1020,353 +837,7 @@ export default function PortfolioList() {
           )}
         </div>
       </SimpleDialog>
-
-      {/* Retry Mechanism Dialog */}
-      <SimpleDialog
-        title="Retry Mechanism Settings"
-        description="Configure order retry settings for failed orders"
-        open={showRetryMechanismDialog}
-        onOpenChange={setShowRetryMechanismDialog}
-        size="md"
-        footer={
-          <div className="flex justify-between w-full">
-            <Button variant="outline" onClick={() => setShowRetryMechanismDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveRetrySettings} className="bg-amber-600 hover:bg-amber-700">
-              Save Settings
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium flex items-center">
-              <RefreshCw className="h-4 w-4 mr-2 text-amber-500" />
-              Entry Order Retry Settings
-            </h3>
-
-            <div className="flex items-center space-x-2 mb-4">
-              <Switch
-                id="entryOrderRetry"
-                checked={retrySettings.entryOrderRetry}
-                onCheckedChange={(checked) => setRetrySettings({ ...retrySettings, entryOrderRetry: checked })}
-              />
-              <Label htmlFor="entryOrderRetry">Enable Entry Order Retry</Label>
-            </div>
-
-            {retrySettings.entryOrderRetry && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6 border-l-2 border-amber-200">
-                <div>
-                  <Label htmlFor="entryRetryCount" className="text-xs">
-                    Entry Retry Count
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="entryRetryCount"
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={retrySettings.entryRetryCount}
-                      onChange={(e) => setRetrySettings({ ...retrySettings, entryRetryCount: Number(e.target.value) })}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="entryRetryWaitSeconds" className="text-xs">
-                    Wait Between Retries (seconds)
-                  </Label>
-                  <div className="relative">
-                    <Clock className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      id="entryRetryWaitSeconds"
-                      type="number"
-                      min="1"
-                      max="60"
-                      value={retrySettings.entryRetryWaitSeconds}
-                      onChange={(e) =>
-                        setRetrySettings({ ...retrySettings, entryRetryWaitSeconds: Number(e.target.value) })
-                      }
-                      className="pl-8"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="entryMaxWaitSeconds" className="text-xs">
-                    Maximum Wait Time (seconds)
-                  </Label>
-                  <div className="relative">
-                    <Clock className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      id="entryMaxWaitSeconds"
-                      type="number"
-                      min="5"
-                      max="300"
-                      value={retrySettings.entryMaxWaitSeconds}
-                      onChange={(e) =>
-                        setRetrySettings({ ...retrySettings, entryMaxWaitSeconds: Number(e.target.value) })
-                      }
-                      className="pl-8"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium flex items-center">
-              <ArrowRightLeft className="h-4 w-4 mr-2 text-red-500" />
-              Exit Order Retry Settings
-            </h3>
-
-            <div className="flex items-center space-x-2 mb-4">
-              <Switch
-                id="exitOrderRetry"
-                checked={retrySettings.exitOrderRetry}
-                onCheckedChange={(checked) => setRetrySettings({ ...retrySettings, exitOrderRetry: checked })}
-              />
-              <Label htmlFor="exitOrderRetry">Enable Exit Order Retry</Label>
-            </div>
-
-            {retrySettings.exitOrderRetry && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6 border-l-2 border-red-200">
-                <div>
-                  <Label htmlFor="exitRetryCount" className="text-xs">
-                    Exit Retry Count
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="exitRetryCount"
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={retrySettings.exitRetryCount}
-                      onChange={(e) => setRetrySettings({ ...retrySettings, exitRetryCount: Number(e.target.value) })}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="exitRetryWaitSeconds" className="text-xs">
-                    Wait Between Retries (seconds)
-                  </Label>
-                  <div className="relative">
-                    <Clock className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      id="exitRetryWaitSeconds"
-                      type="number"
-                      min="1"
-                      max="60"
-                      value={retrySettings.exitRetryWaitSeconds}
-                      onChange={(e) =>
-                        setRetrySettings({ ...retrySettings, exitRetryWaitSeconds: Number(e.target.value) })
-                      }
-                      className="pl-8"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="exitMaxWaitSeconds" className="text-xs">
-                    Maximum Wait Time (seconds)
-                  </Label>
-                  <div className="relative">
-                    <Clock className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      id="exitMaxWaitSeconds"
-                      type="number"
-                      min="5"
-                      max="300"
-                      value={retrySettings.exitMaxWaitSeconds}
-                      onChange={(e) =>
-                        setRetrySettings({ ...retrySettings, exitMaxWaitSeconds: Number(e.target.value) })
-                      }
-                      className="pl-8"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </SimpleDialog>
-
-      {/* Profit Locking Dialog */}
-      <SimpleDialog
-        title="Profit Locking Settings"
-        description="Configure profit locking to secure profits"
-        open={showProfitLockingDialog}
-        onOpenChange={setShowProfitLockingDialog}
-        size="md"
-        footer={
-          <div className="flex justify-between w-full">
-            <Button variant="outline" onClick={() => setShowProfitLockingDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveProfitLockingSettings} className="bg-blue-600 hover:bg-blue-700">
-              Save Settings
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2 mb-4">
-              <Switch
-                id="profitLockingEnabled"
-                checked={profitLockingSettings.enabled}
-                onCheckedChange={(checked) => setProfitLockingSettings({ ...profitLockingSettings, enabled: checked })}
-              />
-              <Label htmlFor="profitLockingEnabled">Enable Profit Locking</Label>
-            </div>
-
-            {profitLockingSettings.enabled && (
-              <div className="space-y-4 pl-6 border-l-2 border-blue-200">
-                <div>
-                  <Label htmlFor="profitThreshold" className="text-xs">
-                    If Profit Reaches (₹)
-                  </Label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-green-500" />
-                    <Input
-                      id="profitThreshold"
-                      type="number"
-                      min="0"
-                      value={profitLockingSettings.profitThreshold}
-                      onChange={(e) =>
-                        setProfitLockingSettings({
-                          ...profitLockingSettings,
-                          profitThreshold: Number(e.target.value),
-                        })
-                      }
-                      className="pl-8"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    The profit amount that triggers the profit locking mechanism
-                  </p>
-                </div>
-
-                <div>
-                  <Label htmlFor="minimumProfitLock" className="text-xs">
-                    Lock Minimum Profit At (₹)
-                  </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-blue-500" />
-                    <Input
-                      id="minimumProfitLock"
-                      type="number"
-                      min="0"
-                      value={profitLockingSettings.minimumProfitLock}
-                      onChange={(e) =>
-                        setProfitLockingSettings({
-                          ...profitLockingSettings,
-                          minimumProfitLock: Number(e.target.value),
-                        })
-                      }
-                      className="pl-8"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">The minimum profit amount that will be secured</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </SimpleDialog>
-
-      {/* Profit Trailing Dialog */}
-      <SimpleDialog
-        title="Profit Trailing Settings"
-        description="Configure profit trailing to maximize profits"
-        open={showProfitTrailingDialog}
-        onOpenChange={setShowProfitTrailingDialog}
-        size="md"
-        footer={
-          <div className="flex justify-between w-full">
-            <Button variant="outline" onClick={() => setShowProfitTrailingDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveProfitTrailingSettings} className="bg-green-600 hover:bg-green-700">
-              Save Settings
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2 mb-4">
-              <Switch
-                id="profitTrailingEnabled"
-                checked={profitTrailingSettings.enabled}
-                onCheckedChange={(checked) =>
-                  setProfitTrailingSettings({ ...profitTrailingSettings, enabled: checked })
-                }
-              />
-              <Label htmlFor="profitTrailingEnabled">Enable Profit Trailing</Label>
-            </div>
-
-            {profitTrailingSettings.enabled && (
-              <div className="space-y-4 pl-6 border-l-2 border-green-200">
-                <div>
-                  <Label htmlFor="increaseBy" className="text-xs">
-                    Every Increase In Profit By (₹)
-                  </Label>
-                  <div className="relative">
-                    <TrendingUp className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-green-500" />
-                    <Input
-                      id="increaseBy"
-                      type="number"
-                      min="0"
-                      value={profitTrailingSettings.increaseBy}
-                      onChange={(e) =>
-                        setProfitTrailingSettings({
-                          ...profitTrailingSettings,
-                          increaseBy: Number(e.target.value),
-                        })
-                      }
-                      className="pl-8"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    The profit increase amount that triggers the trailing mechanism
-                  </p>
-                </div>
-
-                <div>
-                  <Label htmlFor="trailBy" className="text-xs">
-                    Trail Profit By (₹)
-                  </Label>
-                  <div className="relative">
-                    <ArrowRightLeft className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-green-500" />
-                    <Input
-                      id="trailBy"
-                      type="number"
-                      min="0"
-                      value={profitTrailingSettings.trailBy}
-                      onChange={(e) =>
-                        setProfitTrailingSettings({
-                          ...profitTrailingSettings,
-                          trailBy: Number(e.target.value),
-                        })
-                      }
-                      className="pl-8"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    The amount by which the stop loss will be trailed
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </SimpleDialog>
-
-      <Toaster position="top-right" />
+      <Toaster />
     </div>
   )
 }
@@ -1383,24 +854,5 @@ function SimpleDialog({ children, title, description, open, onOpenChange, size, 
         <DialogFooter>{footer}</DialogFooter>
       </DialogContent>
     </Dialog>
-  )
-}
-
-function ChevronRight(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m9 18 6-6-6-6" />
-    </svg>
   )
 }

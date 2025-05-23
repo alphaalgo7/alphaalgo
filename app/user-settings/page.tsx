@@ -31,7 +31,6 @@ import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { SimpleDialog } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { toast } from "@/components/ui/use-toast"
 
 export default function UserSettingsPage() {
   // Sample user data
@@ -221,13 +220,6 @@ export default function UserSettingsPage() {
   const [activeTab, setActiveTab] = useState("all")
   const [showAddUserDialog, setShowAddUserDialog] = useState(false)
   const [newUser, setNewUser] = useState({
-    fullName: "",
-    phoneNumber: "",
-    email: "",
-    phoneOtp: "",
-    emailOtp: "",
-    phoneVerified: false,
-    emailVerified: false,
     username: "",
     broker: "Zerodha",
     brokerId: "",
@@ -267,11 +259,6 @@ export default function UserSettingsPage() {
   const [showBulkSquareOffDialog, setShowBulkSquareOffDialog] = useState(false)
   const [showBulkLoginDialog, setShowBulkLoginDialog] = useState(false)
   const [isProcessingBulkAction, setIsProcessingBulkAction] = useState(false)
-
-  const [addUserStep, setAddUserStep] = useState(1) // 1 for verification, 2 for broker details
-  const [phoneOtpSent, setPhoneOtpSent] = useState(false)
-  const [emailOtpSent, setEmailOtpSent] = useState(false)
-  const [isVerifying, setIsVerifying] = useState(false)
 
   const filteredUsers = users.filter((user) => {
     // Text search
@@ -374,91 +361,6 @@ export default function UserSettingsPage() {
     }))
   }
 
-  const sendPhoneOtp = () => {
-    if (!newUser.phoneNumber || newUser.phoneNumber.length !== 10) {
-      toast({
-        title: "Invalid phone number format",
-        description: "Please enter a valid 10-digit phone number",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // Simulate OTP sending
-    setPhoneOtpSent(true)
-    toast({
-      title: "OTP Sent",
-      description: "An OTP has been sent to your phone. Please enter it to verify.",
-    })
-  }
-
-  const sendEmailOtp = () => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(newUser.email)) {
-      toast({
-        title: "Invalid email format",
-        description: "Please enter a valid email address",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // Simulate OTP sending
-    setEmailOtpSent(true)
-    toast({
-      title: "OTP Sent",
-      description: "An OTP has been sent to your email. Please enter it to verify.",
-    })
-  }
-
-  const verifyAndProceed = () => {
-    setIsVerifying(true)
-
-    // Simulate OTP verification (in a real app, this would be an API call)
-    setTimeout(() => {
-      // For demo purposes, we'll accept "1234" as the valid OTP
-      const isPhoneOtpValid = newUser.phoneOtp === "1234"
-      const isEmailOtpValid = newUser.emailOtp === "1234"
-
-      if (!isPhoneOtpValid) {
-        toast({
-          title: "OTP did not match. Please try again.",
-          description: "Please check the OTP sent to your phone",
-          variant: "destructive",
-        })
-        setIsVerifying(false)
-        return
-      }
-
-      if (!isEmailOtpValid) {
-        toast({
-          title: "OTP did not match. Please try again.",
-          description: "Please check the OTP sent to your email",
-          variant: "destructive",
-        })
-        setIsVerifying(false)
-        return
-      }
-
-      // Both OTPs verified successfully
-      setNewUser((prev) => ({
-        ...prev,
-        phoneVerified: true,
-        emailVerified: true,
-        username: prev.fullName, // Set username from full name
-      }))
-
-      // Important: This is the key line that was causing the issue
-      setAddUserStep(2)
-      setIsVerifying(false)
-
-      toast({
-        title: "Verification Successful",
-        description: "Phone and email verified successfully. Please complete broker details.",
-      })
-    }, 1500)
-  }
-
   const handleAddUser = () => {
     setIsSubmitting(true)
 
@@ -469,7 +371,7 @@ export default function UserSettingsPage() {
       const userToAdd = {
         ...newUser,
         id: newUserId,
-        alias: newUser.fullName,
+        alias: newUser.username,
         userId: newUser.brokerId,
         password: newUser.brokerPassword,
         twoFA: newUser.totpKey,
@@ -488,17 +390,12 @@ export default function UserSettingsPage() {
         utilizedMarginPercent: "0.00",
       }
 
+      // In a real app, you would make an API call here
+      // For now, we'll just update the local state
       setUsers((prevUsers) => [...prevUsers, userToAdd])
 
       // Reset form and close dialog
       setNewUser({
-        fullName: "",
-        phoneNumber: "",
-        email: "",
-        phoneOtp: "",
-        emailOtp: "",
-        phoneVerified: false,
-        emailVerified: false,
         username: "",
         broker: "Zerodha",
         brokerId: "",
@@ -512,16 +409,8 @@ export default function UserSettingsPage() {
         pledgeMargin: "0.00",
         credits: 500,
       })
-      setAddUserStep(1)
-      setPhoneOtpSent(false)
-      setEmailOtpSent(false)
       setShowAddUserDialog(false)
       setIsSubmitting(false)
-
-      toast({
-        title: "✅ User added successfully",
-        description: "The new user has been added to your account",
-      })
     }, 1500)
   }
 
@@ -1060,312 +949,140 @@ export default function UserSettingsPage() {
 
       {/* Add User Dialog */}
       <SimpleDialog
-        title={`Add New User - ${addUserStep === 1 ? "Verification" : "Broker Details"} (Step ${addUserStep})`}
-        description={
-          addUserStep === 1 ? "Enter user details and verify phone and email" : "Enter broker and API details"
-        }
+        title="Add New User"
+        description="Enter user details to add a new trading account"
         open={showAddUserDialog}
-        onOpenChange={(open) => {
-          if (!open) {
-            // Reset form when closing
-            setNewUser({
-              fullName: "",
-              phoneNumber: "",
-              email: "",
-              phoneOtp: "",
-              emailOtp: "",
-              phoneVerified: false,
-              emailVerified: false,
-              username: "",
-              broker: "Zerodha",
-              brokerId: "",
-              brokerPassword: "",
-              totpKey: "",
-              apiKey: "",
-              apiSecret: "",
-              enabled: true,
-              totalMargin: "10,000,000.00",
-              cashMargin: "10,000,000.00",
-              pledgeMargin: "0.00",
-              credits: 500,
-            })
-            setAddUserStep(1)
-            setPhoneOtpSent(false)
-            setEmailOtpSent(false)
-          }
-          setShowAddUserDialog(open)
-        }}
+        onOpenChange={setShowAddUserDialog}
         size="lg"
         footer={
           <div className="flex justify-between w-full">
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (addUserStep === 2) {
-                  setAddUserStep(1)
-                } else {
-                  setShowAddUserDialog(false)
-                }
-              }}
-            >
-              {addUserStep === 2 ? "Back" : "Cancel"}
+            <Button variant="outline" onClick={() => setShowAddUserDialog(false)}>
+              Cancel
             </Button>
-            {addUserStep === 1 ? (
-              <Button
-                onClick={verifyAndProceed}
-                disabled={isVerifying || !phoneOtpSent || !emailOtpSent || !newUser.phoneOtp || !newUser.emailOtp}
-                className="bg-indigo-600 hover:bg-indigo-700"
-              >
-                {isVerifying ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Verifying...
-                  </>
-                ) : (
-                  "Verify & Continue"
-                )}
-              </Button>
-            ) : (
-              <Button onClick={handleAddUser} disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700">
-                {isSubmitting ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Adding User...
-                  </>
-                ) : (
-                  "Add User"
-                )}
-              </Button>
-            )}
+            <Button onClick={handleAddUser} disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700">
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                "Add User"
+              )}
+            </Button>
           </div>
         }
       >
-        {addUserStep === 1 ? (
-          // Step 1: Verification form
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="fullName" className="text-sm font-medium">
-                  Full Name <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  id="fullName"
-                  placeholder="Enter full name"
-                  value={newUser.fullName}
-                  onChange={(e) => handleNewUserInputChange("fullName", e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="phoneNumber" className="text-sm font-medium">
-                  Phone Number <span className="text-red-500">*</span>
-                </label>
-                <div className="flex gap-2">
-                  <Input
-                    id="phoneNumber"
-                    placeholder="Enter 10-digit phone number"
-                    value={newUser.phoneNumber}
-                    onChange={(e) =>
-                      handleNewUserInputChange("phoneNumber", e.target.value.replace(/\D/g, "").slice(0, 10))
-                    }
-                    required
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={sendPhoneOtp}
-                    disabled={phoneOtpSent || newUser.phoneNumber.length !== 10}
-                    className="whitespace-nowrap"
-                  >
-                    {phoneOtpSent ? "OTP Sent" : "Send OTP"}
-                  </Button>
-                </div>
-                {phoneOtpSent && (
-                  <div className="space-y-2">
-                    <Input
-                      placeholder="Enter OTP sent to phone"
-                      value={newUser.phoneOtp}
-                      onChange={(e) =>
-                        handleNewUserInputChange("phoneOtp", e.target.value.replace(/\D/g, "").slice(0, 4))
-                      }
-                      maxLength={4}
-                    />
-                    <p className="text-xs text-blue-600">
-                      An OTP has been sent to your phone. Please enter it to verify.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">
-                  Email Address <span className="text-red-500">*</span>
-                </label>
-                <div className="flex gap-2">
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter email address"
-                    value={newUser.email}
-                    onChange={(e) => handleNewUserInputChange("email", e.target.value)}
-                    required
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={sendEmailOtp}
-                    disabled={emailOtpSent || !newUser.email}
-                    className="whitespace-nowrap"
-                  >
-                    {emailOtpSent ? "OTP Sent" : "Send OTP"}
-                  </Button>
-                </div>
-                {emailOtpSent && (
-                  <div className="space-y-2">
-                    <Input
-                      placeholder="Enter OTP sent to email"
-                      value={newUser.emailOtp}
-                      onChange={(e) =>
-                        handleNewUserInputChange("emailOtp", e.target.value.replace(/\D/g, "").slice(0, 4))
-                      }
-                      maxLength={4}
-                    />
-                    <p className="text-xs text-blue-600">
-                      An OTP has been sent to your email. Please enter it to verify.
-                    </p>
-                  </div>
-                )}
-              </div>
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="username" className="text-sm font-medium">
+                Username <span className="text-red-500">*</span>
+              </label>
+              <Input
+                id="username"
+                placeholder="e.g., John Doe"
+                value={newUser.username}
+                onChange={(e) => handleNewUserInputChange("username", e.target.value)}
+                required
+              />
             </div>
 
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+            <div className="space-y-2">
+              <label htmlFor="broker" className="text-sm font-medium">
+                Broker <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="broker"
+                className="w-full p-2 border border-gray-300 rounded-md"
+                value={newUser.broker}
+                onChange={(e) => handleNewUserInputChange("broker", e.target.value)}
+              >
+                <option value="Zerodha">Zerodha</option>
+                <option value="APITest">API Test</option>
+                <option value="Upstox">Upstox</option>
+                <option value="Angel">Angel Broking</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="brokerId" className="text-sm font-medium">
+                Broker ID <span className="text-red-500">*</span>
+              </label>
+              <Input
+                id="brokerId"
+                placeholder="e.g., AB1234"
+                value={newUser.brokerId}
+                onChange={(e) => handleNewUserInputChange("brokerId", e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="brokerPassword" className="text-sm font-medium">
+                Broker Password <span className="text-red-500">*</span>
+              </label>
+              <Input
+                id="brokerPassword"
+                type="password"
+                placeholder="Enter broker password"
+                value={newUser.brokerPassword}
+                onChange={(e) => handleNewUserInputChange("brokerPassword", e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="totpKey" className="text-sm font-medium">
+                TOTP Key
+              </label>
+              <Input
+                id="totpKey"
+                placeholder="Enter TOTP key if applicable"
+                value={newUser.totpKey}
+                onChange={(e) => handleNewUserInputChange("totpKey", e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="apiKey" className="text-sm font-medium">
+                API Key <span className="text-red-500">*</span>
+              </label>
+              <Input
+                id="apiKey"
+                placeholder="Enter API Key"
+                value={newUser.apiKey}
+                onChange={(e) => handleNewUserInputChange("apiKey", e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="apiSecret" className="text-sm font-medium">
+                API Secret <span className="text-red-500">*</span>
+              </label>
+              <Input
+                id="apiSecret"
+                placeholder="Enter API Secret"
+                value={newUser.apiSecret}
+                onChange={(e) => handleNewUserInputChange("apiSecret", e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-blue-500 mt-0.5" />
+                <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
                 <div>
-                  <h4 className="font-medium text-blue-800">Verification Required</h4>
-                  <p className="text-sm text-blue-700 mt-1">
-                    Please verify both your phone number and email address to proceed with adding the user.
+                  <h4 className="font-medium text-amber-800">Security Notice</h4>
+                  <p className="text-sm text-amber-700 mt-1">
+                    Your broker and API credentials grant access to your trading account. Never share these credentials
+                    with anyone and ensure you're using a secure connection when entering them.
                   </p>
                 </div>
               </div>
             </div>
           </div>
-        ) : (
-          // Step 2: Broker details form
-          <div className="space-y-6">
-            <div className="p-4 bg-green-50 border border-green-200 rounded-md mb-4">
-              <div className="flex items-start gap-3">
-                <Check className="h-5 w-5 text-green-500 mt-0.5" />
-                <div>
-                  <h4 className="font-medium text-green-800">Verification Complete</h4>
-                  <p className="text-sm text-green-700 mt-1">
-                    Phone and email verified for {newUser.fullName}. Please complete the broker details below.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="broker" className="text-sm font-medium">
-                  Broker <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="broker"
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                  value={newUser.broker}
-                  onChange={(e) => handleNewUserInputChange("broker", e.target.value)}
-                >
-                  <option value="Zerodha">Zerodha</option>
-                  <option value="APITest">API Test</option>
-                  <option value="Upstox">Upstox</option>
-                  <option value="Angel">Angel Broking</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="brokerId" className="text-sm font-medium">
-                  Broker ID <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  id="brokerId"
-                  placeholder="e.g., AB1234"
-                  value={newUser.brokerId}
-                  onChange={(e) => handleNewUserInputChange("brokerId", e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="brokerPassword" className="text-sm font-medium">
-                  Broker Password <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  id="brokerPassword"
-                  type="password"
-                  placeholder="Enter broker password"
-                  value={newUser.brokerPassword}
-                  onChange={(e) => handleNewUserInputChange("brokerPassword", e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="totpKey" className="text-sm font-medium">
-                  TOTP Key
-                </label>
-                <Input
-                  id="totpKey"
-                  placeholder="Enter TOTP key if applicable"
-                  value={newUser.totpKey}
-                  onChange={(e) => handleNewUserInputChange("totpKey", e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="apiKey" className="text-sm font-medium">
-                  API Key <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  id="apiKey"
-                  placeholder="Enter API Key"
-                  value={newUser.apiKey}
-                  onChange={(e) => handleNewUserInputChange("apiKey", e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="apiSecret" className="text-sm font-medium">
-                  API Secret <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  id="apiSecret"
-                  placeholder="Enter API Secret"
-                  value={newUser.apiSecret}
-                  onChange={(e) => handleNewUserInputChange("apiSecret", e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium text-amber-800">Security Notice</h4>
-                    <p className="text-sm text-amber-700 mt-1">
-                      Your broker and API credentials grant access to your trading account. Never share these
-                      credentials with anyone and ensure you're using a secure connection when entering them.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
       </SimpleDialog>
 
       {/* Edit User Dialog */}
