@@ -22,6 +22,10 @@ import {
   BarChart3,
   PieChart,
   Users,
+  XCircle,
+  ArrowUpRight,
+  ArrowDownRight,
+  Trash2,
 } from "lucide-react"
 import { enhancedToast } from "@/components/enhanced-toast"
 
@@ -30,6 +34,9 @@ import { saveData, saveStrategy, loadData } from "@/utils/save-utils"
 
 // Import the InstrumentCard component at the top of the file with the other imports:
 import { InstrumentCard } from "@/components/instrument-card-example"
+
+// Import the ExecutionParameters component
+import { ExecutionParameters } from "@/components/execution-parameters"
 
 // Dummy ToastTest component to resolve the undeclared variable issue
 const ToastTest = () => {
@@ -98,6 +105,12 @@ const LoadingAnimation = () => {
 }
 
 import { useToast } from "@/hooks/use-toast"
+import { Badge } from "@/components/ui/badge"
+
+// Replace the ExecutionParametersSection component with:
+const ExecutionParametersSection = () => {
+  return <ExecutionParameters />
+}
 
 export default function TradingPlatform() {
   const { toast } = useToast()
@@ -1112,6 +1125,7 @@ export default function TradingPlatform() {
           </Card>
         </motion.div>
 
+        {/* Trading Legs Table */}
         <motion.div
           className=""
           initial={{ opacity: 0, y: 20 }}
@@ -1130,21 +1144,21 @@ export default function TradingPlatform() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="bg-slate-100 border-b">
+                    <tr className="bg-slate-100">
                       <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                         ID
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        IDLE
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                         LTP
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        Idle
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                         B/S
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        CE/PE
+                        Type
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                         Lots
@@ -1162,6 +1176,12 @@ export default function TradingPlatform() {
                         Stoploss
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Action
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Time
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
@@ -1177,91 +1197,78 @@ export default function TradingPlatform() {
                         onMouseEnter={() => setHoveredRow(leg.id)}
                         onMouseLeave={() => setHoveredRow(null)}
                       >
-                        {/* ID Column */}
-                        <td className="px-4 py-4 whitespace-nowrap">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           <div className="flex items-center">
-                            <span className="text-sm font-medium text-slate-900">{leg.id}.</span>
+                            <span className="font-medium">{leg.id}.</span>
                           </div>
                         </td>
-
-                        {/* LTP */}
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <span className="text-sm font-medium text-slate-900">₹0.0</span>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <Checkbox id={`idle-leg-${leg.id}`} className="h-4 w-4" defaultChecked={false} />
+                          </div>
                         </td>
-
-                        {/* Idle Checkbox */}
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <Checkbox />
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <Badge variant="destructive" className="mr-2 h-5 w-5 p-0 flex items-center justify-center">
+                              <XCircle className="h-3 w-3" />
+                            </Badge>
+                            <div>
+                              {leg.id === 1 ? (
+                                <ArrowUpRight className="h-4 w-4 text-green-500 mr-1" />
+                              ) : (
+                                <ArrowDownRight className="h-4 w-4 text-red-500 mr-1" />
+                              )}
+                            </div>
+                            <span>0.0</span>
+                          </div>
                         </td>
-
-                        {/* B/S */}
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className={`h-8 px-3 text-xs font-medium ${
-                              leg.action === "SELL"
-                                ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
-                                : "bg-green-50 text-green-600 border-green-200 hover:bg-green-100"
-                            }`}
-                            onClick={() => toggleAction(leg.id)}
-                          >
-                            {leg.action}
-                          </Button>
-                        </td>
-
-                        {/* CE/PE */}
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className={`h-8 px-3 text-xs font-medium ${
-                              leg.type === "CE"
-                                ? "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
-                                : "bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100"
-                            }`}
-                            onClick={() => toggleType(leg.id)}
-                          >
-                            {leg.type}
-                          </Button>
-                        </td>
-
-                        {/* Lots */}
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <div className="flex items-center space-x-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => decrementLots(leg.id)}
-                              disabled={leg.lots <= 1}
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div onClick={() => toggleAction(leg.id)}>
+                            <Badge
+                              variant={leg.action === "SELL" ? "destructive" : "default"}
+                              className={`font-medium cursor-pointer ${leg.action === "BUY" ? "bg-green-500 hover:bg-green-600" : ""}`}
                             >
-                              -
-                            </Button>
+                              {leg.action}
+                            </Badge>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div onClick={() => toggleType(leg.id)}>
+                            <Badge
+                              variant="outline"
+                              className={`font-medium cursor-pointer ${leg.type === "CE" ? "border-blue-500 text-blue-500" : "border-purple-500 text-purple-500"}`}
+                            >
+                              {leg.type}
+                            </Badge>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center bg-slate-50 rounded-md border w-16 px-2">
                             <Input
-                              type="number"
-                              className="h-8 w-16 text-center text-sm"
+                              type="text"
+                              className="h-6 w-8 text-center border-0 p-0 bg-transparent"
                               value={leg.lots}
-                              onChange={(e) => {
-                                const newLots = Number.parseInt(e.target.value) || 1
-                                setLegs(legs.map((l) => (l.id === leg.id ? { ...l, lots: newLots } : l)))
-                              }}
+                              readOnly
                             />
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => incrementLots(leg.id)}
-                            >
-                              +
-                            </Button>
+                            <div className="flex flex-col ml-1">
+                              <button
+                                className="h-3 text-[8px] leading-none text-slate-500 hover:text-slate-800"
+                                onClick={() => incrementLots(leg.id)}
+                              >
+                                <ChevronUp className="h-2 w-2" />
+                              </button>
+                              <button
+                                className="h-3 text-[8px] leading-none text-slate-500 hover:text-slate-800"
+                                onClick={() => decrementLots(leg.id)}
+                              >
+                                <ChevronDown className="h-2 w-2" />
+                              </button>
+                            </div>
                           </div>
                         </td>
-
-                        {/* Expiry */}
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <Select defaultValue="Weekly">
-                            <SelectTrigger className="h-8 w-24 text-xs">
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <Select defaultValue={leg.expiry}>
+                            <SelectTrigger className="h-7 min-h-0 text-xs bg-slate-50 border-slate-200">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -1270,82 +1277,135 @@ export default function TradingPlatform() {
                             </SelectContent>
                           </Select>
                         </td>
-
-                        {/* Strike */}
-                        <td className="px-4 py-4 whitespace-nowrap">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           <Button
                             variant="outline"
-                            size="sm"
-                            className="h-8 w-24 text-xs"
+                            className="h-7 min-h-0 text-xs bg-slate-50 border-slate-200 w-full justify-between"
                             onClick={() => setOpenStrikePopup(leg.id)}
                           >
                             {leg.strike}
+                            <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
                           </Button>
                         </td>
-
-                        {/* Target */}
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <div className="flex items-center space-x-1">
-                            <Select defaultValue="None">
-                              <SelectTrigger className="h-8 w-20 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="None">None</SelectItem>
-                                <SelectItem value="Percentage">%</SelectItem>
-                                <SelectItem value="Points">Pts</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Input type="number" className="h-8 w-16 text-xs" placeholder="0" />
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex items-center bg-slate-50 rounded-md border w-full px-2">
+                              <Input
+                                type="text"
+                                className="h-7 text-xs text-center border-0 p-0 bg-transparent w-full"
+                                value={leg.target === "None" ? "None" : leg.target}
+                                onChange={(e) => {
+                                  setLegs(
+                                    legs.map((l) => {
+                                      if (l.id === leg.id) {
+                                        return { ...l, target: e.target.value }
+                                      }
+                                      return l
+                                    }),
+                                  )
+                                }}
+                              />
+                              <div className="flex flex-col ml-1">
+                                <button
+                                  className="h-3 text-[8px] leading-none text-slate-500 hover:text-slate-800"
+                                  onClick={() => incrementTarget(leg.id)}
+                                >
+                                  <ChevronUp className="h-2 w-2" />
+                                </button>
+                                <button
+                                  className="h-3 text-[8px] leading-none text-slate-500 hover:text-slate-800"
+                                  onClick={() => decrementTarget(leg.id)}
+                                >
+                                  <ChevronDown className="h-2 w-2" />
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         </td>
-
-                        {/* Stoploss */}
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <div className="flex items-center space-x-1">
-                            <Select defaultValue="None">
-                              <SelectTrigger className="h-8 w-20 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="None">None</SelectItem>
-                                <SelectItem value="Percentage">%</SelectItem>
-                                <SelectItem value="Points">Pts</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Input type="number" className="h-8 w-16 text-xs" placeholder="0" />
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex items-center bg-slate-50 rounded-md border w-full px-2">
+                              <Input
+                                type="text"
+                                className="h-7 text-xs text-center border-0 p-0 bg-transparent w-full"
+                                value={leg.stoploss === "None" ? "None" : leg.stoploss}
+                                onChange={(e) => {
+                                  setLegs(
+                                    legs.map((l) => {
+                                      if (l.id === leg.id) {
+                                        return { ...l, stoploss: e.target.value }
+                                      }
+                                      return l
+                                    }),
+                                  )
+                                }}
+                              />
+                              <div className="flex flex-col ml-1">
+                                <button
+                                  className="h-3 text-[8px] leading-none text-slate-500 hover:text-slate-800"
+                                  onClick={() => incrementStoploss(leg.id)}
+                                >
+                                  <ChevronUp className="h-2 w-2" />
+                                </button>
+                                <button
+                                  className="h-3 text-[8px] leading-none text-slate-500 hover:text-slate-800"
+                                  onClick={() => decrementStoploss(leg.id)}
+                                >
+                                  <ChevronDown className="h-2 w-2" />
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         </td>
-
-                        {/* Actions */}
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <div className="flex items-center space-x-2">
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <button
+                            className="flex items-center justify-center h-7 w-7 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200"
+                            onClick={() => setOpenAdvancedActionsPopup(leg.id)}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <Input
+                            type="text"
+                            className="h-7 text-xs bg-slate-50 border-slate-200 cursor-pointer"
+                            defaultValue={leg.time}
+                            readOnly
+                            onClick={() => setOpenTimePopup(leg.id)}
+                          />
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center gap-1">
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0 text-green-600 hover:text-green-800 hover:bg-green-50"
-                              onClick={() => setOpenAdvancedActionsPopup(leg.id)}
-                              title="Advanced Actions"
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                              className="h-7 w-7 p-0 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
                               onClick={() => cloneLeg(leg.id)}
-                              title="Clone Leg"
+                              title="Clone leg"
                             >
-                              🔗
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <rect x="8" y="8" width="12" height="12" rx="2" ry="2"></rect>
+                                <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path>
+                              </svg>
                             </Button>
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
+                              className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
                               onClick={() => deleteLeg(leg.id)}
-                              title="Delete Leg"
+                              title="Delete leg"
                             >
-                              ❌
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </td>
@@ -1377,130 +1437,8 @@ export default function TradingPlatform() {
           transition={{ duration: 0.5, delay: 0.3 }}
         >
           <Card className="overflow-hidden border-0 shadow-lg">
-            <div className="bg-gradient-to-r from-slate-800 to-slate-700 p-4 text-white">
-              <h2 className="text-lg font-bold flex items-center">
-                <LineChart className="h-4 w-4 mr-2" />
-                Execution Parameters
-              </h2>
-            </div>
-
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">Start Time</label>
-                    <div className="flex gap-2">
-                      <Select defaultValue="09">
-                        <SelectTrigger className="h-10 bg-slate-50">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="09">09</SelectItem>
-                          <SelectItem value="10">10</SelectItem>
-                          <SelectItem value="11">11</SelectItem>
-                        </SelectContent>
-                      </Select>
-
-                      <Select defaultValue="15">
-                        <SelectTrigger className="h-10 bg-slate-50">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="15">15</SelectItem>
-                          <SelectItem value="30">30</SelectItem>
-                          <SelectItem value="45">45</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">End Time</label>
-                    <div className="flex gap-2">
-                      <Select defaultValue="15">
-                        <SelectTrigger className="h-10 bg-slate-50">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="15">15</SelectItem>
-                          <SelectItem value="16">16</SelectItem>
-                          <SelectItem value="17">17</SelectItem>
-                        </SelectContent>
-                      </Select>
-
-                      <Select defaultValue="30">
-                        <SelectTrigger className="h-10 bg-slate-50">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="30">30</SelectItem>
-                          <SelectItem value="45">45</SelectItem>
-                          <SelectItem value="00">00</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">Square Off Time</label>
-                    <div className="flex gap-2">
-                      <Select defaultValue="15">
-                        <SelectTrigger className="h-10 bg-slate-50">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="15">15</SelectItem>
-                          <SelectItem value="16">16</SelectItem>
-                          <SelectItem value="17">17</SelectItem>
-                        </SelectContent>
-                      </Select>
-
-                      <Select defaultValue="45">
-                        <SelectTrigger className="h-10 bg-slate-50">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="45">45</SelectItem>
-                          <SelectItem value="00">00</SelectItem>
-                          <SelectItem value="15">15</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">Square Off Options</label>
-                    <div className="grid grid-cols-1 gap-2">
-                      <div className="flex items-center space-x-2 bg-slate-50 p-2 rounded-md">
-                        <Checkbox id="squareOffLoss" />
-                        <label htmlFor="squareOffLoss" className="text-sm">
-                          Square Off Loss Making
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2 bg-slate-50 p-2 rounded-md">
-                        <Checkbox id="squareOffProfit" />
-                        <label htmlFor="squareOffProfit" className="text-sm">
-                          Square Off Profit Making
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">Profit Protection</label>
-                    <Input type="text" className="h-10 bg-slate-50" placeholder="Enter value" />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">Loss Protection</label>
-                    <Input type="text" className="h-10 bg-slate-50" placeholder="Enter value" />
-                  </div>
-                </div>
-              </div>
+            <CardContent className="p-0">
+              <ExecutionParameters />
             </CardContent>
           </Card>
         </motion.div>
@@ -1684,6 +1622,14 @@ export default function TradingPlatform() {
         legId={openAdvancedActionsPopup || 0}
         isOpen={openAdvancedActionsPopup !== null}
         onClose={() => setOpenAdvancedActionsPopup(null)}
+        legs={legs}
+      />
+
+      {/* Time Settings Popup */}
+      <TimeSettingsPopup
+        legId={openTimePopup || 0}
+        isOpen={openTimePopup !== null}
+        onClose={() => setOpenTimePopup(null)}
       />
     </div>
   )
@@ -1765,15 +1711,267 @@ const StrikeSelectionPopup = ({
   )
 }
 
-// Advanced Actions Popup
-const AdvancedActionsPopup = ({ legId, isOpen, onClose }: { legId: number; isOpen: boolean; onClose: () => void }) => {
+// Advanced Actions Popup - Enhanced version matching the uploaded code
+const AdvancedActionsPopup = ({
+  legId,
+  isOpen,
+  onClose,
+  legs,
+}: { legId: number; isOpen: boolean; onClose: () => void; legs?: any[] }) => {
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="bg-white rounded-lg shadow-xl p-6 w-[450px] max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">Action Settings - Leg {legId}</h3>
+          <Button variant="outline" size="sm" onClick={onClose}>
+            ✕
+          </Button>
+        </div>
+
+        <div className="space-y-4">
+          {/* On Target Trigger Section */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center">
+              <div className="h-4 w-4 mr-2 text-green-500">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12,6 12,12 16,14" />
+                </svg>
+              </div>
+              On Target Trigger
+            </label>
+            <Select defaultValue="exit">
+              <SelectTrigger className="h-8 text-xs bg-slate-50">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="exit">Exit Position</SelectItem>
+                <SelectItem value="partial">Partial Exit</SelectItem>
+                <SelectItem value="trail">Trail SL</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="mt-2 p-2 bg-green-50 rounded-md border border-green-100">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-green-700">Target Value</span>
+                <div className="flex items-center gap-2">
+                  <Input className="h-6 w-16 text-xs" defaultValue="10%" />
+                  <Select defaultValue="percent">
+                    <SelectTrigger className="h-6 text-xs w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percent">Percent</SelectItem>
+                      <SelectItem value="points">Points</SelectItem>
+                      <SelectItem value="absolute">Absolute</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Profit Trailing Options */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center">
+              <ArrowUpRight className="h-4 w-4 mr-2 text-green-500" />
+              Profit Trailing
+            </label>
+            <div className="p-2 bg-green-50 rounded-md border border-green-100 space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox id={`profit-trailing-${legId}`} />
+                <label htmlFor={`profit-trailing-${legId}`} className="text-xs text-green-700">
+                  Enable Profit Trailing
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-green-700 block mb-1">If profit reaches</label>
+                  <Input className="h-6 text-xs" placeholder="1000" />
+                </div>
+                <div>
+                  <label className="text-xs text-green-700 block mb-1">Lock minimum profit at</label>
+                  <Input className="h-6 text-xs" placeholder="500" />
+                </div>
+                <div>
+                  <label className="text-xs text-green-700 block mb-1">Every increase in profit by</label>
+                  <Input className="h-6 text-xs" placeholder="100" />
+                </div>
+                <div>
+                  <label className="text-xs text-green-700 block mb-1">Trail profit by</label>
+                  <Input className="h-6 text-xs" placeholder="50" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* On SL Trigger Section */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center">
+              <div className="h-4 w-4 mr-2 text-red-500">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="15" y1="9" x2="9" y2="15" />
+                  <line x1="9" y1="9" x2="15" y2="15" />
+                </svg>
+              </div>
+              On SL Trigger
+            </label>
+            <Select defaultValue="exit">
+              <SelectTrigger className="h-8 text-xs bg-slate-50">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="exit">Exit Position</SelectItem>
+                <SelectItem value="hedge">Add Hedge</SelectItem>
+                <SelectItem value="none">Do Nothing</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="mt-2 p-2 bg-red-50 rounded-md border border-red-100">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-red-700">Stoploss Value</span>
+                <div className="flex items-center gap-2">
+                  <Input className="h-6 w-16 text-xs" defaultValue="5%" />
+                  <Select defaultValue="percent">
+                    <SelectTrigger className="h-6 text-xs w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percent">Percent</SelectItem>
+                      <SelectItem value="points">Points</SelectItem>
+                      <SelectItem value="absolute">Absolute</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Stoploss Trailing Options */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center">
+              <ArrowDownRight className="h-4 w-4 mr-2 text-red-500" />
+              Stoploss Trailing
+            </label>
+            <div className="p-2 bg-red-50 rounded-md border border-red-100 space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox id={`sl-trailing-${legId}`} />
+                <label htmlFor={`sl-trailing-${legId}`} className="text-xs text-red-700">
+                  Enable Stoploss Trailing
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-red-700 block mb-1">If loss reaches</label>
+                  <Input className="h-6 text-xs" placeholder="1000" />
+                </div>
+                <div>
+                  <label className="text-xs text-red-700 block mb-1">Maximum loss at</label>
+                  <Input className="h-6 text-xs" placeholder="2000" />
+                </div>
+                <div>
+                  <label className="text-xs text-red-700 block mb-1">Every increase in loss by</label>
+                  <Input className="h-6 text-xs" placeholder="100" />
+                </div>
+                <div>
+                  <label className="text-xs text-red-700 block mb-1">Trail loss by</label>
+                  <Input className="h-6 text-xs" placeholder="50" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Leg-specific options */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center">
+              <LineChart className="h-4 w-4 mr-2 text-blue-500" />
+              Leg-Specific Actions
+            </label>
+
+            <div className="mt-2 p-2 bg-blue-50 rounded-md border border-blue-100">
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-blue-700 font-medium">Execute Legs</span>
+                    <Button variant="outline" size="sm" className="h-6 text-xs py-0 px-2">
+                      Select All
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1 max-h-24 overflow-y-auto bg-white rounded border border-slate-200 p-1">
+                    {legs &&
+                      legs.map((l) => (
+                        <div key={`exec-${l.id}`} className="flex items-center space-x-2 p-1 hover:bg-slate-50 rounded">
+                          <Checkbox id={`exec-leg-${l.id}`} defaultChecked={l.id === 1} />
+                          <label htmlFor={`exec-leg-${l.id}`} className="text-xs cursor-pointer flex-1">
+                            Leg {l.id} ({l.action} {l.type})
+                          </label>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-blue-700 font-medium">Square Off Legs</span>
+                    <Button variant="outline" size="sm" className="h-6 text-xs py-0 px-2">
+                      Select All
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1 max-h-24 overflow-y-auto bg-white rounded border border-slate-200 p-1">
+                    {legs &&
+                      legs.map((l) => (
+                        <div key={`sq-${l.id}`} className="flex items-center space-x-2 p-1 hover:bg-slate-50 rounded">
+                          <Checkbox id={`sq-leg-${l.id}`} defaultChecked={l.id === 1} />
+                          <label htmlFor={`sq-leg-${l.id}`} className="text-xs cursor-pointer flex-1">
+                            Leg {l.id} ({l.action} {l.type})
+                          </label>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white" onClick={onClose}>
+            Apply Settings
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Time Settings Popup
+const TimeSettingsPopup = ({ legId, isOpen, onClose }: { legId: number; isOpen: boolean; onClose: () => void }) => {
   if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-white rounded-lg shadow-xl p-6 w-96">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">Advanced Actions - Leg {legId}</h3>
+          <h3 className="text-lg font-semibold">Time Settings - Leg {legId}</h3>
           <Button variant="outline" size="sm" onClick={onClose}>
             ✕
           </Button>
@@ -1781,37 +1979,57 @@ const AdvancedActionsPopup = ({ legId, isOpen, onClose }: { legId: number; isOpe
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">On Target Action</label>
-            <div className="flex gap-2">
-              <Select defaultValue="None">
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="None">None</SelectItem>
-                  <SelectItem value="Execute">Execute</SelectItem>
-                  <SelectItem value="Re-execute">Re-execute</SelectItem>
-                  <SelectItem value="Square Off">Square Off</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-slate-500">Leg IDs:</span>
-                <Input className="h-9 w-20 text-xs" placeholder="1,2,3" />
+            <label className="text-sm font-medium">Entry Time</label>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="relative">
+                <Input className="h-8 text-xs pr-6 cursor-pointer" placeholder="HH" defaultValue="09" />
+                <div className="absolute right-1 top-0 bottom-0 flex flex-col justify-center">
+                  <button className="h-3 text-[8px] leading-none text-slate-500 hover:text-slate-800">
+                    <ChevronUp className="h-2 w-2" />
+                  </button>
+                  <button className="h-3 text-[8px] leading-none text-slate-500 hover:text-slate-800">
+                    <ChevronDown className="h-2 w-2" />
+                  </button>
+                </div>
+              </div>
+              <div className="relative">
+                <Input className="h-8 text-xs pr-6 cursor-pointer" placeholder="MM" defaultValue="15" />
+                <div className="absolute right-1 top-0 bottom-0 flex flex-col justify-center">
+                  <button className="h-3 text-[8px] leading-none text-slate-500 hover:text-slate-800">
+                    <ChevronUp className="h-2 w-2" />
+                  </button>
+                  <button className="h-3 text-[8px] leading-none text-slate-500 hover:text-slate-800">
+                    <ChevronDown className="h-2 w-2" />
+                  </button>
+                </div>
+              </div>
+              <div className="relative">
+                <Input className="h-8 text-xs pr-6 cursor-pointer" placeholder="SS" defaultValue="00" />
+                <div className="absolute right-1 top-0 bottom-0 flex flex-col justify-center">
+                  <button className="h-3 text-[8px] leading-none text-slate-500 hover:text-slate-800">
+                    <ChevronUp className="h-2 w-2" />
+                  </button>
+                  <button className="h-3 text-[8px] leading-none text-slate-500 hover:text-slate-800">
+                    <ChevronDown className="h-2 w-2" />
+                  </button>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">Delay:</span>
-              <Input className="h-8 w-16 text-xs" placeholder="0" />
-              <span className="text-xs text-slate-500">seconds</span>
-            </div>
           </div>
-
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button variant="outline" onClick={onClose}>
-              Cancel
+          <div className="flex justify-between">
+            <Button variant="outline" size="sm" className="text-xs">
+              09:15:00
             </Button>
-            <Button onClick={onClose}>Save</Button>
+            <Button variant="outline" size="sm" className="text-xs">
+              09:30:00
+            </Button>
+            <Button variant="outline" size="sm" className="text-xs">
+              10:00:00
+            </Button>
           </div>
+          <Button className="w-full" onClick={onClose}>
+            Apply Time
+          </Button>
         </div>
       </div>
     </div>
