@@ -22,11 +22,6 @@ import {
   BarChart3,
   PieChart,
   Users,
-  ArrowUpRight,
-  ArrowDownRight,
-  Trash2,
-  Shield,
-  Save,
 } from "lucide-react"
 import { enhancedToast } from "@/components/enhanced-toast"
 
@@ -35,12 +30,6 @@ import { saveData, saveStrategy, loadData } from "@/utils/save-utils"
 
 // Import the InstrumentCard component at the top of the file with the other imports:
 import { InstrumentCard } from "@/components/instrument-card-example"
-
-// Import missing components
-import { Badge } from "@/components/ui/badge"
-import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BasicPopup } from "@/components/basic-popup"
 
 // Dummy ToastTest component to resolve the undeclared variable issue
 const ToastTest = () => {
@@ -159,8 +148,6 @@ export default function TradingPlatform() {
   const [refreshing, setRefreshing] = useState(false)
   const [hoveredRow, setHoveredRow] = useState<number | null>(null)
   const [strategyTags, setStrategyTags] = useState(["DEFAULT", "INTRADAY", "POSITIONAL"])
-  const [newTagName, setNewTagName] = useState("")
-  const [showTagInput, setShowTagInput] = useState(false)
   const [startTime, setStartTime] = useState({ hours: "09", minutes: "20", seconds: "00" })
   const [endTime, setEndTime] = useState({ hours: "15", minutes: "15", seconds: "00" })
   const [sqOffTime, setSqOffTime] = useState({ hours: "15", minutes: "25", seconds: "00" })
@@ -193,7 +180,8 @@ export default function TradingPlatform() {
   // Add state for managing the popover visibility for each leg:
   const [openActionPopup, setOpenActionPopup] = useState<number | null>(null)
   const [openTimePopup, setOpenTimePopup] = useState<number | null>(null)
-  const [openStrikePopup, setOpenStrikePopup] = useState(false)
+  const [openStrikePopup, setOpenStrikePopup] = useState<number | null>(null)
+  const [openAdvancedActionsPopup, setOpenAdvancedActionsPopup] = useState<number | null>(null)
   const [payoffDialogOpen, setPayoffDialogOpen] = useState(false)
 
   const searchParams = useSearchParams()
@@ -474,15 +462,6 @@ export default function TradingPlatform() {
       squareOffLegs: [1],
     }
     setLegs([...legs, newLeg])
-  }
-
-  // Function to add a new strategy tag
-  const addStrategyTag = () => {
-    if (newTagName.trim() !== "") {
-      setStrategyTags([...strategyTags, newTagName.trim().toUpperCase()])
-      setNewTagName("")
-      setShowTagInput(false)
-    }
   }
 
   // Function to delete a leg
@@ -1127,21 +1106,12 @@ export default function TradingPlatform() {
                       </div>
                     </div>
                   </div>
-
-                  <div>
-                    <Button
-                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
-                      onClick={addTradingLeg}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Trading Leg
-                    </Button>
-                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
         </motion.div>
+
         <motion.div
           className=""
           initial={{ opacity: 0, y: 20 }}
@@ -1160,21 +1130,21 @@ export default function TradingPlatform() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="bg-slate-100">
+                    <tr className="bg-slate-100 border-b">
                       <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                         ID
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        IDLE
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                         LTP
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Idle
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                         B/S
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        Type
+                        CE/PE
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                         Lots
@@ -1192,12 +1162,6 @@ export default function TradingPlatform() {
                         Stoploss
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        Action
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        Time
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
@@ -1213,173 +1177,175 @@ export default function TradingPlatform() {
                         onMouseEnter={() => setHoveredRow(leg.id)}
                         onMouseLeave={() => setHoveredRow(null)}
                       >
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{leg.id}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
-                          <Badge variant="outline">IDLE</Badge>
+                        {/* ID Column */}
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <span className="text-sm font-medium text-slate-900">{leg.id}.</span>
+                          </div>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
-                          <span className="font-medium">₹19,458.75</span>
+
+                        {/* LTP */}
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <span className="text-sm font-medium text-slate-900">₹0.0</span>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm">
+
+                        {/* Idle Checkbox */}
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <Checkbox />
+                        </td>
+
+                        {/* B/S */}
+                        <td className="px-4 py-4 whitespace-nowrap">
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            className="px-2 py-1 h-auto"
+                            className={`h-8 px-3 text-xs font-medium ${
+                              leg.action === "SELL"
+                                ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                                : "bg-green-50 text-green-600 border-green-200 hover:bg-green-100"
+                            }`}
                             onClick={() => toggleAction(leg.id)}
                           >
-                            {leg.action === "SELL" ? (
-                              <ArrowDownRight className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <ArrowUpRight className="h-4 w-4 text-red-500" />
-                            )}
+                            {leg.action}
                           </Button>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm">
+
+                        {/* CE/PE */}
+                        <td className="px-4 py-4 whitespace-nowrap">
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            className="px-2 py-1 h-auto"
+                            className={`h-8 px-3 text-xs font-medium ${
+                              leg.type === "CE"
+                                ? "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
+                                : "bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100"
+                            }`}
                             onClick={() => toggleType(leg.id)}
                           >
-                            {leg.type === "CE" ? (
-                              <span className="text-blue-500">CE</span>
-                            ) : (
-                              <span className="text-orange-500">PE</span>
-                            )}
+                            {leg.type}
                           </Button>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
-                          <div className="flex items-center">
-                            <button
-                              className="text-slate-500 hover:text-slate-800 disabled:text-slate-300 disabled:hover:text-slate-300"
+
+                        {/* Lots */}
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="flex items-center space-x-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0"
                               onClick={() => decrementLots(leg.id)}
                               disabled={leg.lots <= 1}
                             >
-                              <ChevronDown className="h-4 w-4" />
-                            </button>
+                              -
+                            </Button>
                             <Input
-                              type="text"
-                              className="h-8 w-12 text-center border-0 p-0 bg-transparent"
+                              type="number"
+                              className="h-8 w-16 text-center text-sm"
                               value={leg.lots}
-                              readOnly
+                              onChange={(e) => {
+                                const newLots = Number.parseInt(e.target.value) || 1
+                                setLegs(legs.map((l) => (l.id === leg.id ? { ...l, lots: newLots } : l)))
+                              }}
                             />
-                            <button
-                              className="text-slate-500 hover:text-slate-800"
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0"
                               onClick={() => incrementLots(leg.id)}
                             >
-                              <ChevronUp className="h-4 w-4" />
-                            </button>
+                              +
+                            </Button>
                           </div>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{leg.expiry}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
+
+                        {/* Expiry */}
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <Select defaultValue="Weekly">
+                            <SelectTrigger className="h-8 w-24 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Weekly">Weekly</SelectItem>
+                              <SelectItem value="Monthly">Monthly</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </td>
+
+                        {/* Strike */}
+                        <td className="px-4 py-4 whitespace-nowrap">
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            className="px-2 py-1 h-auto w-24 justify-start"
+                            className="h-8 w-24 text-xs"
                             onClick={() => setOpenStrikePopup(leg.id)}
                           >
                             {leg.strike}
                           </Button>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
-                          <div className="flex items-center">
-                            <button
-                              className="text-slate-500 hover:text-slate-800"
-                              onClick={() => decrementTarget(leg.id)}
-                            >
-                              <ChevronDown className="h-4 w-4" />
-                            </button>
-                            <Input
-                              type="text"
-                              className="h-8 w-12 text-center border-0 p-0 bg-transparent"
-                              value={leg.target}
-                              readOnly
-                            />
-                            <button
-                              className="text-slate-500 hover:text-slate-800"
-                              onClick={() => incrementTarget(leg.id)}
-                            >
-                              <ChevronUp className="h-4 w-4" />
-                            </button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="px-2 py-1 h-auto"
-                              onClick={() => toggleTargetType(leg.id)}
-                            >
-                              {leg.targetType === "%" ? "%" : "abs"}
-                            </Button>
+
+                        {/* Target */}
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="flex items-center space-x-1">
+                            <Select defaultValue="None">
+                              <SelectTrigger className="h-8 w-20 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="None">None</SelectItem>
+                                <SelectItem value="Percentage">%</SelectItem>
+                                <SelectItem value="Points">Pts</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Input type="number" className="h-8 w-16 text-xs" placeholder="0" />
                           </div>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
-                          <div className="flex items-center">
-                            <button
-                              className="text-slate-500 hover:text-slate-800"
-                              onClick={() => decrementStoploss(leg.id)}
-                            >
-                              <ChevronDown className="h-4 w-4" />
-                            </button>
-                            <Input
-                              type="text"
-                              className="h-8 w-12 text-center border-0 p-0 bg-transparent"
-                              value={leg.stoploss}
-                              readOnly
-                            />
-                            <button
-                              className="text-slate-500 hover:text-slate-800"
-                              onClick={() => incrementStoploss(leg.id)}
-                            >
-                              <ChevronUp className="h-4 w-4" />
-                            </button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="px-2 py-1 h-auto"
-                              onClick={() => toggleStoplossType(leg.id)}
-                            >
-                              {leg.stoplossType === "%" ? "%" : "abs"}
-                            </Button>
+
+                        {/* Stoploss */}
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="flex items-center space-x-1">
+                            <Select defaultValue="None">
+                              <SelectTrigger className="h-8 w-20 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="None">None</SelectItem>
+                                <SelectItem value="Percentage">%</SelectItem>
+                                <SelectItem value="Points">Pts</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Input type="number" className="h-8 w-16 text-xs" placeholder="0" />
                           </div>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="px-2 py-1 h-auto w-24 justify-start"
-                            onClick={() => setOpenActionPopup(leg.id)}
-                          >
-                            {leg.action}
-                          </Button>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="px-2 py-1 h-auto w-24 justify-start"
-                            onClick={() => setOpenTimePopup(leg.id)}
-                          >
-                            {leg.time}
-                          </Button>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm">
-                          <div className="flex gap-2">
-                            <Button variant="outline" size="icon" onClick={() => cloneLeg(leg.id)}>
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24"
-                                fill="currentColor"
-                                className="w-4 h-4"
-                              >
-                                <path
-                                  fillRule="evenodd"
-                                  d="M15.75 4.5a3 3 0 11.825 2.066l-5.478 5.477A3 3 0 014.5 13.5a3 3 0 010-6.066l5.477-5.477A3 3 0 0115.75 4.5zM6.75 12a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM12.75 6a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM15.75 15.75a3 3 0 11.825 2.066l-5.478 5.477A3 3 0 014.5 22.5a3 3 0 010-6.066l5.477-5.477A3 3 0 0115.75 15.75zM6.75 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM12.75 15a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"
-                                  clipRule="evenodd"
-                                />
-                              </svg>
+
+                        {/* Actions */}
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-green-600 hover:text-green-800 hover:bg-green-50"
+                              onClick={() => setOpenAdvancedActionsPopup(leg.id)}
+                              title="Advanced Actions"
+                            >
+                              <Plus className="h-4 w-4" />
                             </Button>
-                            <Button variant="destructive" size="icon" onClick={() => deleteLeg(leg.id)}>
-                              <Trash2 className="h-4 w-4" />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                              onClick={() => cloneLeg(leg.id)}
+                              title="Clone Leg"
+                            >
+                              🔗
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
+                              onClick={() => deleteLeg(leg.id)}
+                              title="Delete Leg"
+                            >
+                              ❌
                             </Button>
                           </div>
                         </td>
@@ -1387,6 +1353,17 @@ export default function TradingPlatform() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Add Leg Button */}
+              <div className="p-4 border-t bg-slate-50">
+                <Button
+                  className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+                  onClick={addTradingLeg}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Trading Leg
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -1402,480 +1379,133 @@ export default function TradingPlatform() {
           <Card className="overflow-hidden border-0 shadow-lg">
             <div className="bg-gradient-to-r from-slate-800 to-slate-700 p-4 text-white">
               <h2 className="text-lg font-bold flex items-center">
-                <Shield className="h-4 w-4 mr-2" />
+                <LineChart className="h-4 w-4 mr-2" />
                 Execution Parameters
               </h2>
             </div>
 
             <CardContent className="p-6">
-              <Tabs defaultValue="protection" className="space-y-4">
-                <TabsList>
-                  <TabsTrigger value="protection">Protection</TabsTrigger>
-                  <TabsTrigger value="time">Time</TabsTrigger>
-                  <TabsTrigger value="quantity">Quantity</TabsTrigger>
-                  <TabsTrigger value="tags">Tags</TabsTrigger>
-                </TabsList>
-                <TabsContent value="protection">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Profit Protection */}
-                    <div className="space-y-4">
-                      <h3 className="text-md font-semibold text-slate-800">Profit Protection</h3>
-                      <div className="space-y-2">
-                        <Label htmlFor="profitReachesValue">Profit Reaches Value</Label>
-                        <Input
-                          type="text"
-                          id="profitReachesValue"
-                          className="h-10 bg-slate-50"
-                          value={profitProtection.profitReachesValue}
-                          onChange={(e) => handleProfitProtectionChange("profitReachesValue", e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="minimumProfitValue">Minimum Profit Value</Label>
-                        <Input
-                          type="text"
-                          id="minimumProfitValue"
-                          className="h-10 bg-slate-50"
-                          value={profitProtection.minimumProfitValue}
-                          onChange={(e) => handleProfitProtectionChange("minimumProfitValue", e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="increasingProfitBy">Increasing Profit By</Label>
-                        <Input
-                          type="text"
-                          id="increasingProfitBy"
-                          className="h-10 bg-slate-50"
-                          value={profitProtection.increasingProfitBy}
-                          onChange={(e) => handleProfitProtectionChange("increasingProfitBy", e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="trailProfitBy">Trail Profit By</Label>
-                        <Input
-                          type="text"
-                          id="trailProfitBy"
-                          className="h-10 bg-slate-50"
-                          value={profitProtection.trailProfitBy}
-                          onChange={(e) => handleProfitProtectionChange("trailProfitBy", e.target.value)}
-                        />
-                      </div>
-                    </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">Start Time</label>
+                    <div className="flex gap-2">
+                      <Select defaultValue="09">
+                        <SelectTrigger className="h-10 bg-slate-50">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="09">09</SelectItem>
+                          <SelectItem value="10">10</SelectItem>
+                          <SelectItem value="11">11</SelectItem>
+                        </SelectContent>
+                      </Select>
 
-                    {/* Loss Protection */}
-                    <div className="space-y-4">
-                      <h3 className="text-md font-semibold text-slate-800">Loss Protection</h3>
-                      <div className="space-y-2">
-                        <Label htmlFor="lossReachesValue">Loss Reaches Value</Label>
-                        <Input
-                          type="text"
-                          id="lossReachesValue"
-                          className="h-10 bg-slate-50"
-                          value={lossProtection.lossReachesValue}
-                          onChange={(e) => handleLossProtectionChange("lossReachesValue", e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="maximumLossValue">Maximum Loss Value</Label>
-                        <Input
-                          type="text"
-                          id="maximumLossValue"
-                          className="h-10 bg-slate-50"
-                          value={lossProtection.maximumLossValue}
-                          onChange={(e) => handleLossProtectionChange("maximumLossValue", e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="increasingLossBy">Increasing Loss By</Label>
-                        <Input
-                          type="text"
-                          id="increasingLossBy"
-                          className="h-10 bg-slate-50"
-                          value={lossProtection.increasingLossBy}
-                          onChange={(e) => handleLossProtectionChange("increasingLossBy", e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="trailLossBy">Trail Loss By</Label>
-                        <Input
-                          type="text"
-                          id="trailLossBy"
-                          className="h-10 bg-slate-50"
-                          value={lossProtection.trailLossBy}
-                          onChange={(e) => handleLossProtectionChange("trailLossBy", e.target.value)}
-                        />
-                      </div>
+                      <Select defaultValue="15">
+                        <SelectTrigger className="h-10 bg-slate-50">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="15">15</SelectItem>
+                          <SelectItem value="30">30</SelectItem>
+                          <SelectItem value="45">45</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
-                  {/* Square Off Options */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                    <div className="space-y-2">
-                      <h3 className="text-md font-semibold text-slate-800">Square Off Options</h3>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">End Time</label>
+                    <div className="flex gap-2">
+                      <Select defaultValue="15">
+                        <SelectTrigger className="h-10 bg-slate-50">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="15">15</SelectItem>
+                          <SelectItem value="16">16</SelectItem>
+                          <SelectItem value="17">17</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <Select defaultValue="30">
+                        <SelectTrigger className="h-10 bg-slate-50">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="30">30</SelectItem>
+                          <SelectItem value="45">45</SelectItem>
+                          <SelectItem value="00">00</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">Square Off Time</label>
+                    <div className="flex gap-2">
+                      <Select defaultValue="15">
+                        <SelectTrigger className="h-10 bg-slate-50">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="15">15</SelectItem>
+                          <SelectItem value="16">16</SelectItem>
+                          <SelectItem value="17">17</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <Select defaultValue="45">
+                        <SelectTrigger className="h-10 bg-slate-50">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="45">45</SelectItem>
+                          <SelectItem value="00">00</SelectItem>
+                          <SelectItem value="15">15</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">Square Off Options</label>
+                    <div className="grid grid-cols-1 gap-2">
                       <div className="flex items-center space-x-2 bg-slate-50 p-2 rounded-md">
-                        <Checkbox
-                          id="sqoffLossMaking"
-                          checked={sqoffLossMaking}
-                          onCheckedChange={handleSqoffLossMakingChange}
-                        />
-                        <label htmlFor="sqoffLossMaking" className="text-sm">
+                        <Checkbox id="squareOffLoss" />
+                        <label htmlFor="squareOffLoss" className="text-sm">
                           Square Off Loss Making
                         </label>
                       </div>
                       <div className="flex items-center space-x-2 bg-slate-50 p-2 rounded-md">
-                        <Checkbox
-                          id="sqoffProfitMaking"
-                          checked={sqoffProfitMaking}
-                          onCheckedChange={handleSqoffProfitMakingChange}
-                        />
-                        <label htmlFor="sqoffProfitMaking" className="text-sm">
+                        <Checkbox id="squareOffProfit" />
+                        <label htmlFor="squareOffProfit" className="text-sm">
                           Square Off Profit Making
                         </label>
                       </div>
                     </div>
                   </div>
-                </TabsContent>
+                </div>
 
-                <TabsContent value="time">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Start Time */}
-                    <div className="space-y-4">
-                      <h3 className="text-md font-semibold text-slate-800">Start Time</h3>
-                      <div className="flex items-center gap-2">
-                        <div className="flex flex-col items-center">
-                          <button
-                            className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200"
-                            onClick={() => updateTime(startTime, setStartTime, "hours", true)}
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </button>
-                          <div
-                            className={`text-2xl font-semibold w-16 text-center ${
-                              activeTimeField === "hours" ? "text-blue-600" : ""
-                            }`}
-                            onClick={() => setActiveTimeField("hours")}
-                          >
-                            {startTime.hours}
-                          </div>
-                          <button
-                            className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200"
-                            onClick={() => updateTime(startTime, setStartTime, "hours", false)}
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </button>
-                        </div>
-                        <span className="text-2xl font-semibold">:</span>
-                        <div className="flex flex-col items-center">
-                          <button
-                            className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200"
-                            onClick={() => updateTime(startTime, setStartTime, "minutes", true)}
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </button>
-                          <div
-                            className={`text-2xl font-semibold w-16 text-center ${
-                              activeTimeField === "minutes" ? "text-blue-600" : ""
-                            }`}
-                            onClick={() => setActiveTimeField("minutes")}
-                          >
-                            {startTime.minutes}
-                          </div>
-                          <button
-                            className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200"
-                            onClick={() => updateTime(startTime, setStartTime, "minutes", false)}
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </button>
-                        </div>
-                        <span className="text-2xl font-semibold">:</span>
-                        <div className="flex flex-col items-center">
-                          <button
-                            className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200"
-                            onClick={() => updateTime(startTime, setStartTime, "seconds", true)}
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </button>
-                          <div
-                            className={`text-2xl font-semibold w-16 text-center ${
-                              activeTimeField === "seconds" ? "text-blue-600" : ""
-                            }`}
-                            onClick={() => setActiveTimeField("seconds")}
-                          >
-                            {startTime.seconds}
-                          </div>
-                          <button
-                            className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200"
-                            onClick={() => updateTime(startTime, setStartTime, "seconds", false)}
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                      <p className="text-sm text-slate-500">
-                        The strategy will start executing at {formatTime(startTime)}.
-                      </p>
-                    </div>
-
-                    {/* End Time */}
-                    <div className="space-y-4">
-                      <h3 className="text-md font-semibold text-slate-800">End Time</h3>
-                      <div className="flex items-center gap-2">
-                        <div className="flex flex-col items-center">
-                          <button
-                            className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200"
-                            onClick={() => updateTime(endTime, setEndTime, "hours", true)}
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </button>
-                          <div
-                            className={`text-2xl font-semibold w-16 text-center ${
-                              activeTimeField === "hours" ? "text-blue-600" : ""
-                            }`}
-                            onClick={() => setActiveTimeField("hours")}
-                          >
-                            {endTime.hours}
-                          </div>
-                          <button
-                            className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200"
-                            onClick={() => updateTime(endTime, setEndTime, "hours", false)}
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </button>
-                        </div>
-                        <span className="text-2xl font-semibold">:</span>
-                        <div className="flex flex-col items-center">
-                          <button
-                            className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200"
-                            onClick={() => updateTime(endTime, setEndTime, "minutes", true)}
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </button>
-                          <div
-                            className={`text-2xl font-semibold w-16 text-center ${
-                              activeTimeField === "minutes" ? "text-blue-600" : ""
-                            }`}
-                            onClick={() => setActiveTimeField("minutes")}
-                          >
-                            {endTime.minutes}
-                          </div>
-                          <button
-                            className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200"
-                            onClick={() => updateTime(endTime, setEndTime, "minutes", false)}
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </button>
-                        </div>
-                        <span className="text-2xl font-semibold">:</span>
-                        <div className="flex flex-col items-center">
-                          <button
-                            className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200"
-                            onClick={() => updateTime(endTime, setEndTime, "seconds", true)}
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </button>
-                          <div
-                            className={`text-2xl font-semibold w-16 text-center ${
-                              activeTimeField === "seconds" ? "text-blue-600" : ""
-                            }`}
-                            onClick={() => setActiveTimeField("seconds")}
-                          >
-                            {endTime.seconds}
-                          </div>
-                          <button
-                            className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200"
-                            onClick={() => updateTime(endTime, setEndTime, "seconds", false)}
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                      <p className="text-sm text-slate-500">
-                        The strategy will stop executing at {formatTime(endTime)}.
-                      </p>
-                    </div>
-
-                    {/* Square Off Time */}
-                    <div className="space-y-4">
-                      <h3 className="text-md font-semibold text-slate-800">Square Off Time</h3>
-                      <div className="flex items-center gap-2">
-                        <div className="flex flex-col items-center">
-                          <button
-                            className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200"
-                            onClick={() => updateTime(sqOffTime, setSqOffTime, "hours", true)}
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </button>
-                          <div
-                            className={`text-2xl font-semibold w-16 text-center ${
-                              activeTimeField === "hours" ? "text-blue-600" : ""
-                            }`}
-                            onClick={() => setActiveTimeField("hours")}
-                          >
-                            {sqOffTime.hours}
-                          </div>
-                          <button
-                            className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200"
-                            onClick={() => updateTime(sqOffTime, setSqOffTime, "hours", false)}
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </button>
-                        </div>
-                        <span className="text-2xl font-semibold">:</span>
-                        <div className="flex flex-col items-center">
-                          <button
-                            className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200"
-                            onClick={() => updateTime(sqOffTime, setSqOffTime, "minutes", true)}
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </button>
-                          <div
-                            className={`text-2xl font-semibold w-16 text-center ${
-                              activeTimeField === "minutes" ? "text-blue-600" : ""
-                            }`}
-                            onClick={() => setActiveTimeField("minutes")}
-                          >
-                            {sqOffTime.minutes}
-                          </div>
-                          <button
-                            className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200"
-                            onClick={() => updateTime(sqOffTime, setSqOffTime, "minutes", false)}
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </button>
-                        </div>
-                        <span className="text-2xl font-semibold">:</span>
-                        <div className="flex flex-col items-center">
-                          <button
-                            className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200"
-                            onClick={() => updateTime(sqOffTime, setSqOffTime, "seconds", true)}
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </button>
-                          <div
-                            className={`text-2xl font-semibold w-16 text-center ${
-                              activeTimeField === "seconds" ? "text-blue-600" : ""
-                            }`}
-                            onClick={() => setActiveTimeField("seconds")}
-                          >
-                            {sqOffTime.seconds}
-                          </div>
-                          <button
-                            className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200"
-                            onClick={() => updateTime(sqOffTime, setSqOffTime, "seconds", false)}
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                      <p className="text-sm text-slate-500">
-                        The strategy will be squared off at {formatTime(sqOffTime)}.
-                      </p>
-                    </div>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">Profit Protection</label>
+                    <Input type="text" className="h-10 bg-slate-50" placeholder="Enter value" />
                   </div>
-                </TabsContent>
 
-                <TabsContent value="quantity">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Percent Value */}
-                    <div className="space-y-4">
-                      <h3 className="text-md font-semibold text-slate-800">Percent Value</h3>
-                      <div className="space-y-2">
-                        <Label htmlFor="percentValue">Enter Percent Value</Label>
-                        <Input
-                          type="text"
-                          id="percentValue"
-                          className="h-10 bg-slate-50"
-                          value={percentValue}
-                          onChange={(e) => setPercentValue(e.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Time Value */}
-                    <div className="space-y-4">
-                      <h3 className="text-md font-semibold text-slate-800">Time Value</h3>
-                      <div className="space-y-2">
-                        <Label htmlFor="timeValue">Enter Time Value</Label>
-                        <Input
-                          type="text"
-                          id="timeValue"
-                          className="h-10 bg-slate-50"
-                          value={timeValue}
-                          onChange={(e) => setTimeValue(e.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Quantity Value */}
-                    <div className="space-y-4">
-                      <h3 className="text-md font-semibold text-slate-800">Quantity Value</h3>
-                      <div className="space-y-2">
-                        <Label htmlFor="quantityValue">Enter Quantity Value</Label>
-                        <Input
-                          type="text"
-                          id="quantityValue"
-                          className="h-10 bg-slate-50"
-                          value={quantityValue}
-                          onChange={(e) => {
-                            setQuantityValue(e.target.value)
-                            setCalculatedQuantity(Number(e.target.value) * lotSize)
-                          }}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="calculatedQuantity">Calculated Quantity</Label>
-                        <Input
-                          type="text"
-                          id="calculatedQuantity"
-                          className="h-10 bg-slate-50"
-                          value={calculatedQuantity}
-                          readOnly
-                        />
-                      </div>
-                    </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">Loss Protection</label>
+                    <Input type="text" className="h-10 bg-slate-50" placeholder="Enter value" />
                   </div>
-                </TabsContent>
-
-                <TabsContent value="tags">
-                  <div className="space-y-4">
-                    <h3 className="text-md font-semibold text-slate-800">Strategy Tags</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {strategyTags.map((tag) => (
-                        <Badge key={tag} variant="secondary">
-                          {tag}
-                        </Badge>
-                      ))}
-                      {!showTagInput && (
-                        <Button variant="outline" size="sm" onClick={() => setShowTagInput(true)}>
-                          Add Tag
-                        </Button>
-                      )}
-                    </div>
-                    {showTagInput && (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="text"
-                          placeholder="New tag name"
-                          value={newTagName}
-                          onChange={(e) => setNewTagName(e.target.value)}
-                          className="h-10 bg-slate-50"
-                        />
-                        <Button variant="outline" size="sm" onClick={addStrategyTag}>
-                          Add
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setShowTagInput(false)}>
-                          Cancel
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Strategy Name and Save */}
+        {/* Strategy Tags */}
         <motion.div
           className=""
           initial={{ opacity: 0, y: 20 }}
@@ -1885,75 +1515,305 @@ export default function TradingPlatform() {
           <Card className="overflow-hidden border-0 shadow-lg">
             <div className="bg-gradient-to-r from-slate-800 to-slate-700 p-4 text-white">
               <h2 className="text-lg font-bold flex items-center">
-                <Save className="h-4 w-4 mr-2" />
-                Save Strategy
+                <LineChart className="h-4 w-4 mr-2" />
+                Strategy Tags
               </h2>
             </div>
+
             <CardContent className="p-6">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="portfolioName">Strategy Name</Label>
+                  <label className="text-sm font-medium text-slate-700">Strategy Tags</label>
+                  <div className="flex flex-wrap gap-2 p-3 border rounded-md bg-slate-50 min-h-[100px]">
+                    {strategyTags.map((tag, index) => (
+                      <div
+                        key={index}
+                        className="group relative bg-blue-100 text-blue-700 rounded-full px-3 py-1 text-sm font-medium flex items-center gap-2 hover:bg-blue-200 transition-colors"
+                      >
+                        <Input
+                          type="text"
+                          value={tag}
+                          onChange={(e) => {
+                            const newTags = [...strategyTags]
+                            newTags[index] = e.target.value.toUpperCase()
+                            setStrategyTags(newTags)
+                          }}
+                          className="bg-transparent border-0 p-0 h-auto text-sm font-medium text-blue-700 focus:ring-0 focus:outline-none min-w-[60px] w-auto"
+                          style={{ width: `${Math.max(tag.length * 8 + 20, 60)}px` }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault()
+                              // Add new tag after current one
+                              const newTags = [...strategyTags]
+                              newTags.splice(index + 1, 0, "NEW_TAG")
+                              setStrategyTags(newTags)
+                              // Focus the new input after a short delay
+                              setTimeout(() => {
+                                const inputs = document.querySelectorAll('input[type="text"]')
+                                const nextInput = inputs[index + 1] as HTMLInputElement
+                                if (nextInput) {
+                                  nextInput.focus()
+                                  nextInput.select()
+                                }
+                              }, 50)
+                            } else if (e.key === "Backspace" && tag === "") {
+                              e.preventDefault()
+                              // Remove empty tag
+                              const newTags = [...strategyTags]
+                              newTags.splice(index, 1)
+                              setStrategyTags(newTags)
+                              // Focus previous input if available
+                              setTimeout(() => {
+                                const inputs = document.querySelectorAll('input[type="text"]')
+                                const prevInput = inputs[Math.max(0, index - 1)] as HTMLInputElement
+                                if (prevInput) {
+                                  prevInput.focus()
+                                }
+                              }, 50)
+                            }
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            const newTags = [...strategyTags]
+                            newTags.splice(index, 1)
+                            setStrategyTags(newTags)
+                          }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-blue-900 ml-1"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            className="w-4 h-4"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3 text-xs border-dashed border-slate-300 text-slate-500 hover:text-slate-700 hover:border-slate-400"
+                      onClick={() => {
+                        setStrategyTags([...strategyTags, "NEW_TAG"])
+                        // Focus the new input after a short delay
+                        setTimeout(() => {
+                          const inputs = document.querySelectorAll('input[type="text"]')
+                          const lastInput = inputs[inputs.length - 1] as HTMLInputElement
+                          if (lastInput) {
+                            lastInput.focus()
+                            lastInput.select()
+                          }
+                        }, 50)
+                      }}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Tag
+                    </Button>
+                  </div>
+
+                  <div className="text-xs text-slate-500">
+                    Click on any tag to edit it. Press Enter to add a new tag after current one. Press Backspace on
+                    empty tag to delete it.
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Save Button */}
+        <motion.div
+          className=""
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+        >
+          <Card className="overflow-hidden border-0 shadow-lg">
+            <div className="bg-gradient-to-r from-slate-800 to-slate-700 p-4 text-white">
+              <h2 className="text-lg font-bold flex items-center">
+                <LineChart className="h-4 w-4 mr-2" />
+                Save Strategy
+              </h2>
+            </div>
+
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Strategy Name</label>
                   <Input
                     type="text"
-                    id="portfolioName"
-                    placeholder="Enter strategy name"
                     className="h-10 bg-slate-50"
+                    placeholder="Enter strategy name"
                     value={portfolioName}
                     onChange={(e) => setPortfolioName(e.target.value)}
                   />
                 </div>
-                <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleSavePortfolio}>
-                  {strategyId ? "Update Strategy" : "Save Strategy"}
-                </Button>
+
+                <div>
+                  <Button
+                    className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+                    onClick={handleSavePortfolio}
+                  >
+                    Save Strategy
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
         </motion.div>
       </div>
 
-      {/* Popups */}
-      <BasicPopup open={payoffDialogOpen} setOpen={setPayoffDialogOpen}>
-        <div className="flex flex-col">
-          <h3 className="text-xl font-bold mb-4">Payoff Chart</h3>
-          <img src="/payoff-chart.png" alt="Payoff Chart" className="w-full h-auto" />
+      {/* Strike Selection Popup */}
+      <StrikeSelectionPopup
+        legId={openStrikePopup || 0}
+        isOpen={openStrikePopup !== null}
+        onClose={() => setOpenStrikePopup(null)}
+        updateLegStrike={updateLegStrike}
+      />
+
+      {/* Advanced Actions Popup */}
+      <AdvancedActionsPopup
+        legId={openAdvancedActionsPopup || 0}
+        isOpen={openAdvancedActionsPopup !== null}
+        onClose={() => setOpenAdvancedActionsPopup(null)}
+      />
+    </div>
+  )
+}
+
+// Strike Selection Popup
+const StrikeSelectionPopup = ({
+  legId,
+  isOpen,
+  onClose,
+  updateLegStrike,
+}: {
+  legId: number
+  isOpen: boolean
+  onClose: () => void
+  updateLegStrike: (legId: number, strike: string) => void
+}) => {
+  if (!isOpen) return null
+
+  const generateStrikes = () => {
+    const strikes = ["ATM"]
+    // ATM + strikes
+    for (let i = 50; i <= 2000; i += 50) {
+      strikes.push(`ATM+${i}`)
+    }
+    // ATM - strikes
+    for (let i = 50; i <= 2000; i += 50) {
+      strikes.push(`ATM-${i}`)
+    }
+    return strikes
+  }
+
+  const strikes = generateStrikes()
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="bg-white rounded-lg shadow-xl p-6 w-96 max-h-[80vh] overflow-hidden">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">Select Strike Price</h3>
+          <Button variant="outline" size="sm" onClick={onClose}>
+            ✕
+          </Button>
         </div>
-      </BasicPopup>
 
-      {legs.map((leg) => (
-        <BasicPopup key={leg.id} open={openActionPopup === leg.id} setOpen={() => setOpenActionPopup(null)}>
-          <div className="flex flex-col">
-            <h3 className="text-xl font-bold mb-4">Select Action</h3>
-            <Button variant="outline" onClick={() => {}}>
-              Buy
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            <Button variant="outline" className="text-xs">
+              ATM
             </Button>
-            <Button variant="outline" onClick={() => {}}>
-              Sell
+            <Button variant="outline" className="text-xs">
+              ITM
+            </Button>
+            <Button variant="outline" className="text-xs">
+              OTM
             </Button>
           </div>
-        </BasicPopup>
-      ))}
 
-      {legs.map((leg) => (
-        <BasicPopup key={leg.id} open={openTimePopup === leg.id} setOpen={() => setOpenTimePopup(null)}>
-          <div className="flex flex-col">
-            <h3 className="text-xl font-bold mb-4">Select Time</h3>
-            <Input type="time" />
-          </div>
-        </BasicPopup>
-      ))}
-
-      <BasicPopup open={openStrikePopup} setOpen={() => setOpenStrikePopup(false)}>
-        <div className="flex flex-col">
-          <h3 className="text-xl font-bold mb-4">Select Strike</h3>
-          <div className="grid grid-cols-3 gap-2">
-            {strikePrices.map((strike) => (
-              <Button key={strike} variant="outline" onClick={() => updateLegStrike(1, strike)}>
-                {strike}
-              </Button>
-            ))}
+          <div className="max-h-60 overflow-y-auto border rounded-md p-2">
+            <div className="grid grid-cols-2 gap-1">
+              {strikes.map((strike) => (
+                <Button
+                  key={strike}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-8"
+                  onClick={() => {
+                    updateLegStrike(legId, strike)
+                    onClose()
+                  }}
+                >
+                  {strike}
+                </Button>
+              ))}
+            </div>
           </div>
         </div>
-      </BasicPopup>
+      </div>
+    </div>
+  )
+}
+
+// Advanced Actions Popup
+const AdvancedActionsPopup = ({ legId, isOpen, onClose }: { legId: number; isOpen: boolean; onClose: () => void }) => {
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="bg-white rounded-lg shadow-xl p-6 w-96">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">Advanced Actions - Leg {legId}</h3>
+          <Button variant="outline" size="sm" onClick={onClose}>
+            ✕
+          </Button>
+        </div>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">On Target Action</label>
+            <div className="flex gap-2">
+              <Select defaultValue="None">
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="None">None</SelectItem>
+                  <SelectItem value="Execute">Execute</SelectItem>
+                  <SelectItem value="Re-execute">Re-execute</SelectItem>
+                  <SelectItem value="Square Off">Square Off</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-slate-500">Leg IDs:</span>
+                <Input className="h-9 w-20 text-xs" placeholder="1,2,3" />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">Delay:</span>
+              <Input className="h-8 w-16 text-xs" placeholder="0" />
+              <span className="text-xs text-slate-500">seconds</span>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button onClick={onClose}>Save</Button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

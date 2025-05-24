@@ -525,6 +525,9 @@ export default function LiveMonitorPage() {
   const [selectedPortfolio, setSelectedPortfolio] = useState("all")
   const [selectedUser, setSelectedUser] = useState("all")
 
+  // Add state for selected users
+  const [selectedUsers, setSelectedUsers] = useState<number[]>([])
+
   // Column filters for positions
   const [positionFilters, setPositionFilters] = useState({
     account: "",
@@ -649,10 +652,10 @@ export default function LiveMonitorPage() {
 
   // Handle custom square off
   const handleCustomSquareOff = async () => {
-    if (selectedPositions.length === 0) {
+    if (selectedUsers.length === 0) {
       toast({
         title: "Warning",
-        description: "Please select at least one position",
+        description: "Please select at least one user",
         variant: "destructive",
       })
       return
@@ -663,15 +666,15 @@ export default function LiveMonitorPage() {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500))
       setIsCustomSquareOffDialogOpen(false)
-      setSelectedPositions([])
+      setSelectedUsers([])
       toast({
         title: "Success",
-        description: `${selectedPositions.length} positions squared off successfully`,
+        description: `All positions for ${selectedUsers.length} selected users squared off successfully`,
       })
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to square off selected positions",
+        description: "Failed to square off selected user positions",
         variant: "destructive",
       })
     } finally {
@@ -808,6 +811,23 @@ export default function LiveMonitorPage() {
     setSelectedPositions((prev) =>
       prev.includes(positionId) ? prev.filter((id) => id !== positionId) : [...prev, positionId],
     )
+  }
+
+  // Toggle user selection
+  const toggleUserSelection = (userId: number) => {
+    setSelectedUsers((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]))
+  }
+
+  // Check if all users are selected
+  const allUsersSelected = mockUsers.length > 0 && mockUsers.every((user) => selectedUsers.includes(user.id))
+
+  // Toggle all users selection
+  const toggleAllUsers = () => {
+    if (allUsersSelected) {
+      setSelectedUsers([])
+    } else {
+      setSelectedUsers(mockUsers.map((user) => user.id))
+    }
   }
 
   // Check if all positions are selected
@@ -1239,16 +1259,14 @@ export default function LiveMonitorPage() {
                       <DialogHeader>
                         <DialogTitle>Custom Square Off</DialogTitle>
                         <DialogDescription>
-                          Square off selected positions. Select positions from the table first.
+                          Square off all positions for selected users. Select users from the table first.
                         </DialogDescription>
                       </DialogHeader>
                       <div className="py-4">
-                        {selectedPositions.length === 0 ? (
-                          <p className="text-yellow-500">
-                            No positions selected. Please select positions from the table.
-                          </p>
+                        {selectedUsers.length === 0 ? (
+                          <p className="text-yellow-500">No users selected. Please select users from the table.</p>
                         ) : (
-                          <p>{selectedPositions.length} positions selected for square off.</p>
+                          <p>{selectedUsers.length} users selected for square off.</p>
                         )}
                       </div>
                       <DialogFooter>
@@ -1258,7 +1276,7 @@ export default function LiveMonitorPage() {
                         <Button
                           variant="destructive"
                           onClick={handleCustomSquareOff}
-                          disabled={isLoading || selectedPositions.length === 0}
+                          disabled={isLoading || selectedUsers.length === 0}
                           className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
                         >
                           {isLoading ? "Processing..." : "Square Off Selected"}
@@ -1331,6 +1349,13 @@ export default function LiveMonitorPage() {
                   <Table>
                     <TableHeader className="bg-slate-50 dark:bg-slate-800/50">
                       <TableRow className="hover:bg-slate-50/50 dark:hover:bg-slate-800/70">
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={allUsersSelected}
+                            onCheckedChange={toggleAllUsers}
+                            aria-label="Select all users"
+                          />
+                        </TableHead>
                         <TableHead className="w-12 font-semibold">SI No</TableHead>
                         <TableHead className="font-semibold">Account</TableHead>
                         <TableHead className="font-semibold">Trading Account</TableHead>
@@ -1354,6 +1379,13 @@ export default function LiveMonitorPage() {
                           key={user.id}
                           className="hover:bg-slate-50/80 transition-colors dark:hover:bg-slate-800/50"
                         >
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedUsers.includes(user.id)}
+                              onCheckedChange={() => toggleUserSelection(user.id)}
+                              aria-label={`Select user ${user.account}`}
+                            />
+                          </TableCell>
                           <TableCell className="font-medium">{index + 1}</TableCell>
                           <TableCell className="font-medium">{user.account}</TableCell>
                           <TableCell>{user.tradingAccount}</TableCell>
@@ -1384,7 +1416,7 @@ export default function LiveMonitorPage() {
                         </TableRow>
                       ))}
                       <TableRow className="font-medium bg-slate-100/80 dark:bg-slate-700/50">
-                        <TableCell colSpan={3} className="font-bold">
+                        <TableCell colSpan={4} className="font-bold">
                           Total
                         </TableCell>
                         <TableCell
