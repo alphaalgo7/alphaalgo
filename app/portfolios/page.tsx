@@ -31,6 +31,8 @@ import {
   TrendingUp,
   Clock,
   ArrowRightLeft,
+  Play,
+  Square,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast, Toaster } from "sonner"
@@ -59,11 +61,14 @@ export default function PortfolioList() {
   const [expandedPortfolioId, setExpandedPortfolioId] = useState(null)
   const [activeTab, setActiveTab] = useState("all")
   const [sortBy, setSortBy] = useState("newest")
+  const [livePortfolios, setLivePortfolios] = useState(new Set())
 
   const [showUserAssignDialog, setShowUserAssignDialog] = useState(false)
   const [showRetryMechanismDialog, setShowRetryMechanismDialog] = useState(false)
   const [showProfitLockingDialog, setShowProfitLockingDialog] = useState(false)
   const [showProfitTrailingDialog, setShowProfitTrailingDialog] = useState(false)
+  const [showGoLiveDialog, setShowGoLiveDialog] = useState(false)
+  const [selectedPortfoliosForLive, setSelectedPortfoliosForLive] = useState([])
 
   const [selectedPortfolioForUser, setSelectedPortfolioForUser] = useState(null)
   const [selectedPortfolioForSettings, setSelectedPortfolioForSettings] = useState(null)
@@ -96,6 +101,24 @@ export default function PortfolioList() {
     increaseBy: 500,
     trailBy: 200,
   })
+
+  // Load live portfolios from localStorage on component mount
+  useEffect(() => {
+    const savedLivePortfolios = localStorage.getItem("livePortfolios")
+    if (savedLivePortfolios) {
+      try {
+        const livePortfolioIds = JSON.parse(savedLivePortfolios)
+        setLivePortfolios(new Set(livePortfolioIds))
+      } catch (error) {
+        console.error("Error loading live portfolios:", error)
+      }
+    }
+  }, [])
+
+  // Save live portfolios to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("livePortfolios", JSON.stringify(Array.from(livePortfolios)))
+  }, [livePortfolios])
 
   // Load portfolios from localStorage on component mount
   useEffect(() => {
@@ -253,11 +276,29 @@ export default function PortfolioList() {
     try {
       localStorage.removeItem(id)
       setPortfolios(portfolios.filter((p) => p.id !== id))
+      // Remove from live portfolios if it was live
+      setLivePortfolios((prev) => {
+        const newSet = new Set(prev)
+        newSet.delete(id)
+        return newSet
+      })
       toast.success("Portfolio deleted successfully")
     } catch (error) {
       console.error("Error deleting portfolio:", error)
       toast.error("Failed to delete portfolio")
     }
+  }
+
+  // Handle stop live for individual portfolio
+  const handleStopLive = (portfolioId, e) => {
+    e.stopPropagation()
+    setLivePortfolios((prev) => {
+      const newSet = new Set(prev)
+      newSet.delete(portfolioId)
+      return newSet
+    })
+    const portfolio = portfolios.find((p) => p.id === portfolioId)
+    toast.success(`${portfolio?.name} stopped from live trading`)
   }
 
   // Handle assign user
@@ -330,6 +371,47 @@ export default function PortfolioList() {
     )
 
     setShowProfitTrailingDialog(true)
+  }
+
+  // Handle go live dialog
+  const handleGoLive = () => {
+    setSelectedPortfoliosForLive([])
+    setShowGoLiveDialog(true)
+  }
+
+  // Handle portfolio selection for go live
+  const handlePortfolioSelection = (portfolioId) => {
+    setSelectedPortfoliosForLive((prev) => {
+      if (prev.includes(portfolioId)) {
+        return prev.filter((id) => id !== portfolioId)
+      } else {
+        return [...prev, portfolioId]
+      }
+    })
+  }
+
+  // Handle go live execution
+  const handleExecuteGoLive = () => {
+    if (selectedPortfoliosForLive.length === 0) {
+      toast.error("Please select at least one portfolio to go live")
+      return
+    }
+
+    // Add selected portfolios to live portfolios
+    setLivePortfolios((prev) => {
+      const newSet = new Set(prev)
+      selectedPortfoliosForLive.forEach((id) => newSet.add(id))
+      return newSet
+    })
+
+    const selectedPortfolioNames = portfolios.filter((p) => selectedPortfoliosForLive.includes(p.id)).map((p) => p.name)
+
+    toast.success(`${selectedPortfoliosForLive.length} portfolio(s) are now LIVE: ${selectedPortfolioNames.join(", ")}`)
+    setShowGoLiveDialog(false)
+    setSelectedPortfoliosForLive([])
+
+    // Add your go live logic here
+    console.log("Going live with portfolios:", selectedPortfoliosForLive)
   }
 
   // Handle save user assignments
@@ -490,13 +572,25 @@ export default function PortfolioList() {
             <p className="text-muted-foreground mt-1">Manage your trading portfolios in one place</p>
           </div>
 
-          <Button
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-            onClick={handleCreateNew}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Go to Strategies
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+              onClick={handleCreateNew}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Go to Strategies
+            </Button>
+
+            <Button
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+              onClick={handleGoLive}
+            >
+              <div className="flex items-center">
+                <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></div>
+                Go Live
+              </div>
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
@@ -595,310 +689,360 @@ export default function PortfolioList() {
           </div>
         ) : (
           // Portfolio cards
-          filteredPortfolios.map((portfolio) => (
-            <Card
-              key={portfolio.id}
-              className={`overflow-hidden border transition-all hover:shadow-md cursor-pointer ${
-                expandedPortfolioId === portfolio.id ? "border-blue-400 shadow-md" : "border-border/40"
-              }`}
-              onClick={() => handleCardClick(portfolio.id)}
-              data-editable={expandedPortfolioId === portfolio.id}
-            >
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-lg">{portfolio.name}</CardTitle>
-                    <CardDescription className="flex items-center mt-1">
-                      <Calendar className="h-3 w-3 mr-1 text-muted-foreground" />
-                      {formatDate(portfolio.timestamp)}
-                    </CardDescription>
-                  </div>
-                  <div className="flex items-center">
-                    {expandedPortfolioId === portfolio.id ? (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-blue-500"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setExpandedPortfolioId(null)
-                        }}
-                      >
-                        <ChevronUp className="h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleCardClick(portfolio.id)
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
+          filteredPortfolios.map((portfolio) => {
+            const isLive = livePortfolios.has(portfolio.id)
+
+            return (
+              <Card
+                key={portfolio.id}
+                className={`overflow-hidden border transition-all hover:shadow-md cursor-pointer ${
+                  expandedPortfolioId === portfolio.id
+                    ? "border-blue-400 shadow-md"
+                    : isLive
+                      ? "border-green-400 shadow-sm bg-green-50/30 dark:bg-green-900/10"
+                      : "border-border/40"
+                }`}
+                onClick={() => handleCardClick(portfolio.id)}
+                data-editable={expandedPortfolioId === portfolio.id}
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <CardTitle className="text-lg">{portfolio.name}</CardTitle>
+                        {isLive ? (
+                          <Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white animate-pulse">
+                            <Play className="h-3 w-3 mr-1" />
+                            LIVE
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-300">
+                            <Square className="h-3 w-3 mr-1" />
+                            NOT LIVE
+                          </Badge>
+                        )}
+                      </div>
+                      <CardDescription className="flex items-center mt-1">
+                        <Calendar className="h-3 w-3 mr-1 text-muted-foreground" />
+                        {formatDate(portfolio.timestamp)}
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center">
+                      {isLive && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mr-2 text-red-600 border-red-300 hover:bg-red-50"
+                          onClick={(e) => handleStopLive(portfolio.id, e)}
+                        >
+                          <Square className="h-3 w-3 mr-1" />
+                          Stop
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={(e) => handleViewPortfolio(portfolio.id, e)}>
-                          <ArrowUpRight className="h-4 w-4 mr-2" />
-                          View Portfolio
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
+                      )}
+                      {expandedPortfolioId === portfolio.id ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-blue-500"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setExpandedPortfolioId(null)
+                          }}
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
                           onClick={(e) => {
                             e.stopPropagation()
                             handleCardClick(portfolio.id)
                           }}
                         >
-                          <Settings className="h-4 w-4 mr-2" />
-                          Edit Settings
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => handleAssignUser(portfolio.id, e)}>
-                          <Users className="h-4 w-4 mr-2" />
-                          Assign User
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDelete(portfolio.id, e)
-                          }}
-                          className="text-red-600"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete Portfolio
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="pb-3">
-                {/* Portfolio Settings - Editable when expanded */}
-                {expandedPortfolioId === portfolio.id ? (
-                  <div
-                    className="space-y-4 p-4 bg-muted/30 rounded-md mb-4 border border-border"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <h3 className="text-sm font-medium flex items-center">
-                      <Settings className="h-4 w-4 mr-2 text-blue-500" />
-                      Portfolio Settings
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor={`maxProfit-${portfolio.id}`} className="text-xs">
-                          Max Profit
-                        </Label>
-                        <div className="relative">
-                          <DollarSign className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-green-500" />
-                          <Input
-                            id={`maxProfit-${portfolio.id}`}
-                            type="number"
-                            value={editableSettings.maxProfit || 0}
-                            onChange={(e) => handleSettingsChange("maxProfit", Number(e.target.value))}
-                            className="pl-8"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label htmlFor={`maxLoss-${portfolio.id}`} className="text-xs">
-                          Max Loss
-                        </Label>
-                        <div className="relative">
-                          <Shield className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-red-500" />
-                          <Input
-                            id={`maxLoss-${portfolio.id}`}
-                            type="number"
-                            value={editableSettings.maxLoss || 0}
-                            onChange={(e) => handleSettingsChange("maxLoss", Number(e.target.value))}
-                            className="pl-8"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col space-y-3 mt-4">
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleRetryMechanism(portfolio.id, e)
-                        }}
-                        variant="outline"
-                        className="w-full flex justify-between"
-                      >
-                        <div className="flex items-center">
-                          <RefreshCw className="h-4 w-4 mr-2 text-amber-500" />
-                          Retry Mechanism
-                        </div>
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleProfitLocking(portfolio.id, e)
-                        }}
-                        variant="outline"
-                        className="w-full flex justify-between"
-                      >
-                        <div className="flex items-center">
-                          <Lock className="h-4 w-4 mr-2 text-blue-500" />
-                          Profit Locking
-                        </div>
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleProfitTrailing(portfolio.id, e)
-                        }}
-                        variant="outline"
-                        className="w-full flex justify-between"
-                      >
-                        <div className="flex items-center">
-                          <TrendingUp className="h-4 w-4 mr-2 text-green-500" />
-                          Profit Trailing
-                        </div>
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleAssignUser(portfolio.id)
-                        }}
-                        variant="outline"
-                        className="w-full flex justify-between"
-                      >
-                        <div className="flex items-center">
-                          <Users className="h-4 w-4 mr-2 text-indigo-500" />
-                          Assign Users
-                        </div>
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-
-                      <div className="flex gap-2 pt-2">
-                        <Button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleSaveSettings(portfolio.id)
-                          }}
-                          className="w-full bg-blue-600 hover:bg-blue-700"
-                        >
-                          <Save className="h-4 w-4 mr-2" />
-                          Save Settings
+                          <Edit className="h-4 w-4" />
                         </Button>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={(e) => handleViewPortfolio(portfolio.id, e)}>
+                            <ArrowUpRight className="h-4 w-4 mr-2" />
+                            View Portfolio
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleCardClick(portfolio.id)
+                            }}
+                          >
+                            <Settings className="h-4 w-4 mr-2" />
+                            Edit Settings
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => handleAssignUser(portfolio.id, e)}>
+                            <Users className="h-4 w-4 mr-2" />
+                            Assign User
+                          </DropdownMenuItem>
+                          {isLive && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={(e) => handleStopLive(portfolio.id, e)}
+                                className="text-red-600"
+                              >
+                                <Square className="h-4 w-4 mr-2" />
+                                Stop Live Trading
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDelete(portfolio.id, e)
+                            }}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Portfolio
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="pb-3">
+                  {/* Portfolio Settings - Editable when expanded */}
+                  {expandedPortfolioId === portfolio.id ? (
+                    <div
+                      className="space-y-4 p-4 bg-muted/30 rounded-md mb-4 border border-border"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <h3 className="text-sm font-medium flex items-center">
+                        <Settings className="h-4 w-4 mr-2 text-blue-500" />
+                        Portfolio Settings
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor={`maxProfit-${portfolio.id}`} className="text-xs">
+                            Max Profit
+                          </Label>
+                          <div className="relative">
+                            <DollarSign className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-green-500" />
+                            <Input
+                              id={`maxProfit-${portfolio.id}`}
+                              type="number"
+                              value={editableSettings.maxProfit || 0}
+                              onChange={(e) => handleSettingsChange("maxProfit", Number(e.target.value))}
+                              className="pl-8"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor={`maxLoss-${portfolio.id}`} className="text-xs">
+                            Max Loss
+                          </Label>
+                          <div className="relative">
+                            <Shield className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-red-500" />
+                            <Input
+                              id={`maxLoss-${portfolio.id}`}
+                              type="number"
+                              value={editableSettings.maxLoss || 0}
+                              onChange={(e) => handleSettingsChange("maxLoss", Number(e.target.value))}
+                              className="pl-8"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col space-y-3 mt-4">
                         <Button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleRetryMechanism(portfolio.id, e)
+                          }}
                           variant="outline"
+                          className="w-full flex justify-between"
+                        >
+                          <div className="flex items-center">
+                            <RefreshCw className="h-4 w-4 mr-2 text-amber-500" />
+                            Retry Mechanism
+                          </div>
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+
+                        <Button
                           onClick={(e) => {
                             e.stopPropagation()
-                            setExpandedPortfolioId(null)
+                            handleProfitLocking(portfolio.id, e)
                           }}
-                          className="w-1/3"
+                          variant="outline"
+                          className="w-full flex justify-between"
                         >
-                          <X className="h-4 w-4 mr-2" />
-                          Cancel
+                          <div className="flex items-center">
+                            <Lock className="h-4 w-4 mr-2 text-blue-500" />
+                            Profit Locking
+                          </div>
+                          <ChevronRight className="h-4 w-4" />
                         </Button>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  // Collapsed view - just show summary
-                  <div className="grid grid-cols-2 gap-y-2 gap-x-4 mb-4">
-                    <div className="flex items-center text-sm">
-                      <DollarSign className="h-4 w-4 mr-2 text-green-500" />
-                      <span className="text-muted-foreground">Max Profit:</span>
-                      <span className="ml-auto font-medium">₹{portfolio.settings.maxProfit || "0"}</span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <Shield className="h-4 w-4 mr-2 text-red-500" />
-                      <span className="text-muted-foreground">Max Loss:</span>
-                      <span className="ml-auto font-medium">₹{portfolio.settings.maxLoss || "0"}</span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <Lock className="h-4 w-4 mr-2 text-blue-500" />
-                      <span className="text-muted-foreground">Profit Lock:</span>
-                      <span className="ml-auto font-medium">
-                        {portfolio.settings.profitLocking?.enabled ? "Enabled" : "Disabled"}
-                      </span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <TrendingUp className="h-4 w-4 mr-2 text-green-500" />
-                      <span className="text-muted-foreground">Profit Trail:</span>
-                      <span className="ml-auto font-medium">
-                        {portfolio.settings.profitTrailing?.enabled ? "Enabled" : "Disabled"}
-                      </span>
-                    </div>
-                  </div>
-                )}
 
-                {/* Assigned Users */}
-                {portfolio.settings.assignedUsers &&
-                  portfolio.settings.assignedUsers.length > 0 &&
-                  expandedPortfolioId !== portfolio.id && (
-                    <div className="mb-4">
-                      <div className="flex items-center mb-2 text-sm">
-                        <Users className="h-4 w-4 mr-2 text-indigo-500" />
-                        <span className="font-medium">Assigned Users</span>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleProfitTrailing(portfolio.id, e)
+                          }}
+                          variant="outline"
+                          className="w-full flex justify-between"
+                        >
+                          <div className="flex items-center">
+                            <TrendingUp className="h-4 w-4 mr-2 text-green-500" />
+                            Profit Trailing
+                          </div>
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleAssignUser(portfolio.id)
+                          }}
+                          variant="outline"
+                          className="w-full flex justify-between"
+                        >
+                          <div className="flex items-center">
+                            <Users className="h-4 w-4 mr-2 text-indigo-500" />
+                            Assign Users
+                          </div>
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleSaveSettings(portfolio.id)
+                            }}
+                            className="w-full bg-blue-600 hover:bg-blue-700"
+                          >
+                            <Save className="h-4 w-4 mr-2" />
+                            Save Settings
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setExpandedPortfolioId(null)
+                            }}
+                            className="w-1/3"
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            Cancel
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-1">
-                        {portfolio.settings.assignedUsers.map((user, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {user.alias || user.name} (x{user.multiplier})
-                          </Badge>
-                        ))}
+                    </div>
+                  ) : (
+                    // Collapsed view - just show summary
+                    <div className="grid grid-cols-2 gap-y-2 gap-x-4 mb-4">
+                      <div className="flex items-center text-sm">
+                        <DollarSign className="h-4 w-4 mr-2 text-green-500" />
+                        <span className="text-muted-foreground">Max Profit:</span>
+                        <span className="ml-auto font-medium">₹{portfolio.settings.maxProfit || "0"}</span>
+                      </div>
+                      <div className="flex items-center text-sm">
+                        <Shield className="h-4 w-4 mr-2 text-red-500" />
+                        <span className="text-muted-foreground">Max Loss:</span>
+                        <span className="ml-auto font-medium">₹{portfolio.settings.maxLoss || "0"}</span>
+                      </div>
+                      <div className="flex items-center text-sm">
+                        <Lock className="h-4 w-4 mr-2 text-blue-500" />
+                        <span className="text-muted-foreground">Profit Lock:</span>
+                        <span className="ml-auto font-medium">
+                          {portfolio.settings.profitLocking?.enabled ? "Enabled" : "Disabled"}
+                        </span>
+                      </div>
+                      <div className="flex items-center text-sm">
+                        <TrendingUp className="h-4 w-4 mr-2 text-green-500" />
+                        <span className="text-muted-foreground">Profit Trail:</span>
+                        <span className="ml-auto font-medium">
+                          {portfolio.settings.profitTrailing?.enabled ? "Enabled" : "Disabled"}
+                        </span>
                       </div>
                     </div>
                   )}
 
-                {/* Strategies Count */}
-                {portfolio.strategiesCount > 0 && expandedPortfolioId !== portfolio.id && (
-                  <div className="mt-2">
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                      {portfolio.strategiesCount} {portfolio.strategiesCount === 1 ? "Strategy" : "Strategies"}
-                    </Badge>
-                  </div>
-                )}
-              </CardContent>
+                  {/* Assigned Users */}
+                  {portfolio.settings.assignedUsers &&
+                    portfolio.settings.assignedUsers.length > 0 &&
+                    expandedPortfolioId !== portfolio.id && (
+                      <div className="mb-4">
+                        <div className="flex items-center mb-2 text-sm">
+                          <Users className="h-4 w-4 mr-2 text-indigo-500" />
+                          <span className="font-medium">Assigned Users</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {portfolio.settings.assignedUsers.map((user, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {user.alias || user.name} (x{user.multiplier})
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
-              <CardFooter className="bg-muted/30 pt-3 pb-3 flex justify-between">
-                <div className="flex items-center">
-                  <span className="text-sm text-muted-foreground">
-                    {expandedPortfolioId === portfolio.id ? "Edit Mode" : "Portfolio Settings"}
-                  </span>
-                </div>
-                {expandedPortfolioId !== portfolio.id && (
-                  <div className="flex items-center gap-2">
-                    {portfolio.settings.profitLocking?.enabled && (
-                      <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200">
-                        Profit Lock
+                  {/* Strategies Count */}
+                  {portfolio.strategiesCount > 0 && expandedPortfolioId !== portfolio.id && (
+                    <div className="mt-2">
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        {portfolio.strategiesCount} {portfolio.strategiesCount === 1 ? "Strategy" : "Strategies"}
                       </Badge>
-                    )}
-                    {portfolio.settings.profitTrailing?.enabled && (
-                      <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">
-                        Profit Trail
-                      </Badge>
-                    )}
-                    {portfolio.settings.retryMechanism?.entryOrderRetry && (
-                      <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200">
-                        Retry
-                      </Badge>
-                    )}
+                    </div>
+                  )}
+                </CardContent>
+
+                <CardFooter
+                  className={`pt-3 pb-3 flex justify-between ${isLive ? "bg-green-50/50 dark:bg-green-900/10" : "bg-muted/30"}`}
+                >
+                  <div className="flex items-center">
+                    <span className="text-sm text-muted-foreground">
+                      {expandedPortfolioId === portfolio.id
+                        ? "Edit Mode"
+                        : isLive
+                          ? "Live Trading Active"
+                          : "Portfolio Settings"}
+                    </span>
                   </div>
-                )}
-              </CardFooter>
-            </Card>
-          ))
+                  {expandedPortfolioId !== portfolio.id && (
+                    <div className="flex items-center gap-2">
+                      {portfolio.settings.profitLocking?.enabled && (
+                        <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200">
+                          Profit Lock
+                        </Badge>
+                      )}
+                      {portfolio.settings.profitTrailing?.enabled && (
+                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">
+                          Profit Trail
+                        </Badge>
+                      )}
+                      {portfolio.settings.retryMechanism?.entryOrderRetry && (
+                        <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200">
+                          Retry
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                </CardFooter>
+              </Card>
+            )
+          })
         )}
       </div>
 
@@ -1363,6 +1507,158 @@ export default function PortfolioList() {
               </div>
             )}
           </div>
+        </div>
+      </SimpleDialog>
+
+      {/* Go Live Dialog */}
+      <SimpleDialog
+        title="Select Portfolios to Go Live"
+        description="Choose which portfolios you want to activate for live trading"
+        open={showGoLiveDialog}
+        onOpenChange={setShowGoLiveDialog}
+        size="lg"
+        footer={
+          <div className="flex justify-between w-full">
+            <Button variant="outline" onClick={() => setShowGoLiveDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleExecuteGoLive}
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+              disabled={selectedPortfoliosForLive.length === 0}
+            >
+              <div className="flex items-center">
+                <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></div>
+                Go Live ({selectedPortfoliosForLive.length})
+              </div>
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {portfolios.length === 0 ? (
+            <div className="text-center py-8">
+              <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No Portfolios Available</h3>
+              <p className="text-muted-foreground">Create some portfolios first to go live with trading.</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {portfolios.map((portfolio) => {
+                const isSelected = selectedPortfoliosForLive.includes(portfolio.id)
+
+                return (
+                  <div
+                    key={portfolio.id}
+                    className={`flex items-center p-4 rounded-lg border transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
+                        : "bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    }`}
+                    onClick={() => handlePortfolioSelection(portfolio.id)}
+                  >
+                    <div className="flex items-center space-x-3 flex-1">
+                      <div className="flex-shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handlePortfolioSelection(portfolio.id)}
+                          className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                        />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                              {portfolio.name}
+                            </h4>
+                            <div className="flex items-center mt-1 space-x-4">
+                              <span className="text-xs text-gray-500 flex items-center">
+                                <Calendar className="h-3 w-3 mr-1" />
+                                {formatDate(portfolio.timestamp)}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {portfolio.strategiesCount}{" "}
+                                {portfolio.strategiesCount === 1 ? "Strategy" : "Strategies"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="outline" className="text-xs">
+                              {portfolio.type || "Other"}
+                            </Badge>
+                            {portfolio.settings.assignedUsers && portfolio.settings.assignedUsers.length > 0 && (
+                              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                {portfolio.settings.assignedUsers.length} User(s)
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="mt-2 grid grid-cols-2 gap-4 text-xs">
+                          <div className="flex items-center">
+                            <DollarSign className="h-3 w-3 mr-1 text-green-500" />
+                            <span className="text-gray-500">Max Profit:</span>
+                            <span className="ml-1 font-medium">₹{portfolio.settings.maxProfit || "0"}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Shield className="h-3 w-3 mr-1 text-red-500" />
+                            <span className="text-gray-500">Max Loss:</span>
+                            <span className="ml-1 font-medium">₹{portfolio.settings.maxLoss || "0"}</span>
+                          </div>
+                        </div>
+
+                        {(portfolio.settings.profitLocking?.enabled ||
+                          portfolio.settings.profitTrailing?.enabled ||
+                          portfolio.settings.retryMechanism?.entryOrderRetry) && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {portfolio.settings.profitLocking?.enabled && (
+                              <Badge variant="outline" className="text-xs bg-blue-100 text-blue-700 border-blue-200">
+                                Profit Lock
+                              </Badge>
+                            )}
+                            {portfolio.settings.profitTrailing?.enabled && (
+                              <Badge variant="outline" className="text-xs bg-green-100 text-green-700 border-green-200">
+                                Profit Trail
+                              </Badge>
+                            )}
+                            {portfolio.settings.retryMechanism?.entryOrderRetry && (
+                              <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-200">
+                                Retry
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {selectedPortfoliosForLive.length > 0 && (
+            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+              <h4 className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">
+                Selected Portfolios ({selectedPortfoliosForLive.length})
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {portfolios
+                  .filter((p) => selectedPortfoliosForLive.includes(p.id))
+                  .map((portfolio) => (
+                    <Badge
+                      key={portfolio.id}
+                      variant="outline"
+                      className="bg-white dark:bg-gray-800 text-red-700 border-red-300"
+                    >
+                      {portfolio.name}
+                    </Badge>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
       </SimpleDialog>
 
