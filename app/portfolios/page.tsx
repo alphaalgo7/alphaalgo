@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Settings,
   Plus,
@@ -35,7 +36,7 @@ import {
   Square,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { toast, Toaster } from "sonner"
+import { useToast } from "@/hooks/use-toast"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,6 +56,7 @@ import {
 
 export default function PortfolioList() {
   const router = useRouter()
+  const { toast } = useToast()
   const [portfolios, setPortfolios] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
   const [isLoading, setIsLoading] = useState(true)
@@ -1047,638 +1049,649 @@ export default function PortfolioList() {
       </div>
 
       {/* User Assignment Dialog */}
-      <SimpleDialog
-        title="Assign Users to Portfolio"
-        description="Select users and set their multipliers for this portfolio"
-        open={showUserAssignDialog}
-        onOpenChange={setShowUserAssignDialog}
-        size="lg"
-        footer={
-          <div className="flex justify-between w-full">
-            <Button variant="outline" onClick={() => setShowUserAssignDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveUserAssignments} className="bg-indigo-600 hover:bg-indigo-700">
-              Save Assignments
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-6">
-          {/* Available Users */}
-          <div>
-            <h3 className="text-sm font-medium mb-3">Available Users</h3>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {availableUsers.map((user) => {
-                const isSelected = selectedUsers.some((u) => u.id === user.id)
-                const selectedUser = selectedUsers.find((u) => u.id === user.id)
+      <Dialog open={showUserAssignDialog} onOpenChange={setShowUserAssignDialog}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Assign Users to Portfolio</DialogTitle>
+            <DialogDescription>Select users and set their multipliers for this portfolio</DialogDescription>
+          </DialogHeader>
+          <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
+            <div className="space-y-6">
+              {/* Available Users */}
+              <div>
+                <h3 className="text-sm font-medium mb-3">Available Users</h3>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {availableUsers.map((user) => {
+                    const isSelected = selectedUsers.some((u) => u.id === user.id)
+                    const selectedUser = selectedUsers.find((u) => u.id === user.id)
 
-                return (
-                  <div
-                    key={user.id}
-                    className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                      isSelected
-                        ? "bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800"
-                        : "bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700"
-                    } ${!user.enabled ? "opacity-60" : ""}`}
-                  >
-                    <div className="flex items-center gap-3">
+                    return (
                       <div
-                        className={`w-8 h-8 rounded-md ${
-                          user.broker === "Zerodha"
-                            ? "bg-gradient-to-r from-blue-500 to-blue-600"
-                            : "bg-gradient-to-r from-purple-500 to-purple-700"
-                        } flex items-center justify-center text-white font-semibold text-xs`}
+                        key={user.id}
+                        className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                          isSelected
+                            ? "bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800"
+                            : "bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        } ${!user.enabled ? "opacity-60" : ""}`}
                       >
-                        {user.alias.substring(0, 2).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="font-medium">{user.alias}</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {user.userId} • {user.broker}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div
-                          className={`w-2 h-2 rounded-full ${
-                            user.loggedIn && user.enabled
-                              ? "bg-green-500"
-                              : user.enabled
-                                ? "bg-amber-500"
-                                : "bg-gray-400"
-                          }`}
-                        ></div>
-                        <span className="text-xs text-gray-500">
-                          {!user.enabled ? "Disabled" : user.loggedIn ? "Active" : "Logged Out"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {isSelected && (
-                        <div className="flex items-center gap-2">
-                          <Label htmlFor={`multiplier-${user.id}`} className="text-xs">
-                            Multiplier:
-                          </Label>
-                          <Input
-                            id={`multiplier-${user.id}`}
-                            type="number"
-                            min="0.1"
-                            step="0.1"
-                            value={selectedUser?.multiplier || 1}
-                            onChange={(e) => handleUserSelection(user, Number.parseFloat(e.target.value) || 1)}
-                            className="w-20 h-8 text-xs"
-                          />
-                        </div>
-                      )}
-
-                      <Button
-                        variant={isSelected ? "destructive" : "outline"}
-                        size="sm"
-                        onClick={() => (isSelected ? handleUserRemoval(user.id) : handleUserSelection(user))}
-                        disabled={!user.enabled}
-                      >
-                        {isSelected ? "Remove" : "Add"}
-                      </Button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Selected Users Summary */}
-          {selectedUsers.length > 0 && (
-            <div>
-              <h3 className="text-sm font-medium mb-3">Selected Users ({selectedUsers.length})</h3>
-              <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-3 border border-indigo-200 dark:border-indigo-800">
-                <div className="flex flex-wrap gap-2">
-                  {selectedUsers.map((user) => (
-                    <Badge key={user.id} variant="outline" className="bg-white dark:bg-gray-800">
-                      {user.alias} (x{user.multiplier})
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </SimpleDialog>
-
-      {/* Retry Mechanism Dialog */}
-      <SimpleDialog
-        title="Retry Mechanism Settings"
-        description="Configure order retry settings for failed orders"
-        open={showRetryMechanismDialog}
-        onOpenChange={setShowRetryMechanismDialog}
-        size="md"
-        footer={
-          <div className="flex justify-between w-full">
-            <Button variant="outline" onClick={() => setShowRetryMechanismDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveRetrySettings} className="bg-amber-600 hover:bg-amber-700">
-              Save Settings
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium flex items-center">
-              <RefreshCw className="h-4 w-4 mr-2 text-amber-500" />
-              Entry Order Retry Settings
-            </h3>
-
-            <div className="flex items-center space-x-2 mb-4">
-              <Switch
-                id="entryOrderRetry"
-                checked={retrySettings.entryOrderRetry}
-                onCheckedChange={(checked) => setRetrySettings({ ...retrySettings, entryOrderRetry: checked })}
-              />
-              <Label htmlFor="entryOrderRetry">Enable Entry Order Retry</Label>
-            </div>
-
-            {retrySettings.entryOrderRetry && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6 border-l-2 border-amber-200">
-                <div>
-                  <Label htmlFor="entryRetryCount" className="text-xs">
-                    Entry Retry Count
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="entryRetryCount"
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={retrySettings.entryRetryCount}
-                      onChange={(e) => setRetrySettings({ ...retrySettings, entryRetryCount: Number(e.target.value) })}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="entryRetryWaitSeconds" className="text-xs">
-                    Wait Between Retries (seconds)
-                  </Label>
-                  <div className="relative">
-                    <Clock className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      id="entryRetryWaitSeconds"
-                      type="number"
-                      min="1"
-                      max="60"
-                      value={retrySettings.entryRetryWaitSeconds}
-                      onChange={(e) =>
-                        setRetrySettings({ ...retrySettings, entryRetryWaitSeconds: Number(e.target.value) })
-                      }
-                      className="pl-8"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="entryMaxWaitSeconds" className="text-xs">
-                    Maximum Wait Time (seconds)
-                  </Label>
-                  <div className="relative">
-                    <Clock className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      id="entryMaxWaitSeconds"
-                      type="number"
-                      min="5"
-                      max="300"
-                      value={retrySettings.entryMaxWaitSeconds}
-                      onChange={(e) =>
-                        setRetrySettings({ ...retrySettings, entryMaxWaitSeconds: Number(e.target.value) })
-                      }
-                      className="pl-8"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium flex items-center">
-              <ArrowRightLeft className="h-4 w-4 mr-2 text-red-500" />
-              Exit Order Retry Settings
-            </h3>
-
-            <div className="flex items-center space-x-2 mb-4">
-              <Switch
-                id="exitOrderRetry"
-                checked={retrySettings.exitOrderRetry}
-                onCheckedChange={(checked) => setRetrySettings({ ...retrySettings, exitOrderRetry: checked })}
-              />
-              <Label htmlFor="exitOrderRetry">Enable Exit Order Retry</Label>
-            </div>
-
-            {retrySettings.exitOrderRetry && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6 border-l-2 border-red-200">
-                <div>
-                  <Label htmlFor="exitRetryCount" className="text-xs">
-                    Exit Retry Count
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="exitRetryCount"
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={retrySettings.exitRetryCount}
-                      onChange={(e) => setRetrySettings({ ...retrySettings, exitRetryCount: Number(e.target.value) })}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="exitRetryWaitSeconds" className="text-xs">
-                    Wait Between Retries (seconds)
-                  </Label>
-                  <div className="relative">
-                    <Clock className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      id="exitRetryWaitSeconds"
-                      type="number"
-                      min="1"
-                      max="60"
-                      value={retrySettings.exitRetryWaitSeconds}
-                      onChange={(e) =>
-                        setRetrySettings({ ...retrySettings, exitRetryWaitSeconds: Number(e.target.value) })
-                      }
-                      className="pl-8"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="exitMaxWaitSeconds" className="text-xs">
-                    Maximum Wait Time (seconds)
-                  </Label>
-                  <div className="relative">
-                    <Clock className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      id="exitMaxWaitSeconds"
-                      type="number"
-                      min="5"
-                      max="300"
-                      value={retrySettings.exitMaxWaitSeconds}
-                      onChange={(e) =>
-                        setRetrySettings({ ...retrySettings, exitMaxWaitSeconds: Number(e.target.value) })
-                      }
-                      className="pl-8"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </SimpleDialog>
-
-      {/* Profit Locking Dialog */}
-      <SimpleDialog
-        title="Profit Locking Settings"
-        description="Configure profit locking to secure profits"
-        open={showProfitLockingDialog}
-        onOpenChange={setShowProfitLockingDialog}
-        size="md"
-        footer={
-          <div className="flex justify-between w-full">
-            <Button variant="outline" onClick={() => setShowProfitLockingDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveProfitLockingSettings} className="bg-blue-600 hover:bg-blue-700">
-              Save Settings
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2 mb-4">
-              <Switch
-                id="profitLockingEnabled"
-                checked={profitLockingSettings.enabled}
-                onCheckedChange={(checked) => setProfitLockingSettings({ ...profitLockingSettings, enabled: checked })}
-              />
-              <Label htmlFor="profitLockingEnabled">Enable Profit Locking</Label>
-            </div>
-
-            {profitLockingSettings.enabled && (
-              <div className="space-y-4 pl-6 border-l-2 border-blue-200">
-                <div>
-                  <Label htmlFor="profitThreshold" className="text-xs">
-                    If Profit Reaches (₹)
-                  </Label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-green-500" />
-                    <Input
-                      id="profitThreshold"
-                      type="number"
-                      min="0"
-                      value={profitLockingSettings.profitThreshold}
-                      onChange={(e) =>
-                        setProfitLockingSettings({
-                          ...profitLockingSettings,
-                          profitThreshold: Number(e.target.value),
-                        })
-                      }
-                      className="pl-8"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    The profit amount that triggers the profit locking mechanism
-                  </p>
-                </div>
-
-                <div>
-                  <Label htmlFor="minimumProfitLock" className="text-xs">
-                    Lock Minimum Profit At (₹)
-                  </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-blue-500" />
-                    <Input
-                      id="minimumProfitLock"
-                      type="number"
-                      min="0"
-                      value={profitLockingSettings.minimumProfitLock}
-                      onChange={(e) =>
-                        setProfitLockingSettings({
-                          ...profitLockingSettings,
-                          minimumProfitLock: Number(e.target.value),
-                        })
-                      }
-                      className="pl-8"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">The minimum profit amount that will be secured</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </SimpleDialog>
-
-      {/* Profit Trailing Dialog */}
-      <SimpleDialog
-        title="Profit Trailing Settings"
-        description="Configure profit trailing to maximize profits"
-        open={showProfitTrailingDialog}
-        onOpenChange={setShowProfitTrailingDialog}
-        size="md"
-        footer={
-          <div className="flex justify-between w-full">
-            <Button variant="outline" onClick={() => setShowProfitTrailingDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveProfitTrailingSettings} className="bg-green-600 hover:bg-green-700">
-              Save Settings
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2 mb-4">
-              <Switch
-                id="profitTrailingEnabled"
-                checked={profitTrailingSettings.enabled}
-                onCheckedChange={(checked) =>
-                  setProfitTrailingSettings({ ...profitTrailingSettings, enabled: checked })
-                }
-              />
-              <Label htmlFor="profitTrailingEnabled">Enable Profit Trailing</Label>
-            </div>
-
-            {profitTrailingSettings.enabled && (
-              <div className="space-y-4 pl-6 border-l-2 border-green-200">
-                <div>
-                  <Label htmlFor="increaseBy" className="text-xs">
-                    Every Increase In Profit By (₹)
-                  </Label>
-                  <div className="relative">
-                    <TrendingUp className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-green-500" />
-                    <Input
-                      id="increaseBy"
-                      type="number"
-                      min="0"
-                      value={profitTrailingSettings.increaseBy}
-                      onChange={(e) =>
-                        setProfitTrailingSettings({
-                          ...profitTrailingSettings,
-                          increaseBy: Number(e.target.value),
-                        })
-                      }
-                      className="pl-8"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    The profit increase amount that triggers the trailing mechanism
-                  </p>
-                </div>
-
-                <div>
-                  <Label htmlFor="trailBy" className="text-xs">
-                    Trail Profit By (₹)
-                  </Label>
-                  <div className="relative">
-                    <ArrowRightLeft className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-green-500" />
-                    <Input
-                      id="trailBy"
-                      type="number"
-                      min="0"
-                      value={profitTrailingSettings.trailBy}
-                      onChange={(e) =>
-                        setProfitTrailingSettings({
-                          ...profitTrailingSettings,
-                          trailBy: Number(e.target.value),
-                        })
-                      }
-                      className="pl-8"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    The amount by which the stop loss will be trailed
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </SimpleDialog>
-
-      {/* Go Live Dialog */}
-      <SimpleDialog
-        title="Select Portfolios to Go Live"
-        description="Choose which portfolios you want to activate for live trading"
-        open={showGoLiveDialog}
-        onOpenChange={setShowGoLiveDialog}
-        size="lg"
-        footer={
-          <div className="flex justify-between w-full">
-            <Button variant="outline" onClick={() => setShowGoLiveDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleExecuteGoLive}
-              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
-              disabled={selectedPortfoliosForLive.length === 0}
-            >
-              <div className="flex items-center">
-                <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></div>
-                Go Live ({selectedPortfoliosForLive.length})
-              </div>
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          {portfolios.length === 0 ? (
-            <div className="text-center py-8">
-              <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Portfolios Available</h3>
-              <p className="text-muted-foreground">Create some portfolios first to go live with trading.</p>
-            </div>
-          ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {portfolios.map((portfolio) => {
-                const isSelected = selectedPortfoliosForLive.includes(portfolio.id)
-
-                return (
-                  <div
-                    key={portfolio.id}
-                    className={`flex items-center p-4 rounded-lg border transition-all cursor-pointer ${
-                      isSelected
-                        ? "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
-                        : "bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    }`}
-                    onClick={() => handlePortfolioSelection(portfolio.id)}
-                  >
-                    <div className="flex items-center space-x-3 flex-1">
-                      <div className="flex-shrink-0">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => handlePortfolioSelection(portfolio.id)}
-                          className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
-                        />
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-8 h-8 rounded-md ${
+                              user.broker === "Zerodha"
+                                ? "bg-gradient-to-r from-blue-500 to-blue-600"
+                                : "bg-gradient-to-r from-purple-500 to-purple-700"
+                            } flex items-center justify-center text-white font-semibold text-xs`}
+                          >
+                            {user.alias.substring(0, 2).toUpperCase()}
+                          </div>
                           <div>
-                            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                              {portfolio.name}
-                            </h4>
-                            <div className="flex items-center mt-1 space-x-4">
-                              <span className="text-xs text-gray-500 flex items-center">
-                                <Calendar className="h-3 w-3 mr-1" />
-                                {formatDate(portfolio.timestamp)}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                {portfolio.strategiesCount}{" "}
-                                {portfolio.strategiesCount === 1 ? "Strategy" : "Strategies"}
-                              </span>
+                            <div className="font-medium">{user.alias}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {user.userId} • {user.broker}
                             </div>
                           </div>
-
-                          <div className="flex items-center space-x-2">
-                            <Badge variant="outline" className="text-xs">
-                              {portfolio.type || "Other"}
-                            </Badge>
-                            {portfolio.settings.assignedUsers && portfolio.settings.assignedUsers.length > 0 && (
-                              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                                {portfolio.settings.assignedUsers.length} User(s)
-                              </Badge>
-                            )}
+                          <div className="flex items-center gap-1">
+                            <div
+                              className={`w-2 h-2 rounded-full ${
+                                user.loggedIn && user.enabled
+                                  ? "bg-green-500"
+                                  : user.enabled
+                                    ? "bg-amber-500"
+                                    : "bg-gray-400"
+                              }`}
+                            ></div>
+                            <span className="text-xs text-gray-500">
+                              {!user.enabled ? "Disabled" : user.loggedIn ? "Active" : "Logged Out"}
+                            </span>
                           </div>
                         </div>
 
-                        <div className="mt-2 grid grid-cols-2 gap-4 text-xs">
-                          <div className="flex items-center">
-                            <DollarSign className="h-3 w-3 mr-1 text-green-500" />
-                            <span className="text-gray-500">Max Profit:</span>
-                            <span className="ml-1 font-medium">₹{portfolio.settings.maxProfit || "0"}</span>
-                          </div>
-                          <div className="flex items-center">
-                            <Shield className="h-3 w-3 mr-1 text-red-500" />
-                            <span className="text-gray-500">Max Loss:</span>
-                            <span className="ml-1 font-medium">₹{portfolio.settings.maxLoss || "0"}</span>
-                          </div>
-                        </div>
+                        <div className="flex items-center gap-2">
+                          {isSelected && (
+                            <div className="flex items-center gap-2">
+                              <Label htmlFor={`multiplier-${user.id}`} className="text-xs">
+                                Multiplier:
+                              </Label>
+                              <Input
+                                id={`multiplier-${user.id}`}
+                                type="number"
+                                min="0.1"
+                                step="0.1"
+                                value={selectedUser?.multiplier || 1}
+                                onChange={(e) => handleUserSelection(user, Number.parseFloat(e.target.value) || 1)}
+                                className="w-20 h-8 text-xs"
+                              />
+                            </div>
+                          )}
 
-                        {(portfolio.settings.profitLocking?.enabled ||
-                          portfolio.settings.profitTrailing?.enabled ||
-                          portfolio.settings.retryMechanism?.entryOrderRetry) && (
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {portfolio.settings.profitLocking?.enabled && (
-                              <Badge variant="outline" className="text-xs bg-blue-100 text-blue-700 border-blue-200">
-                                Profit Lock
-                              </Badge>
-                            )}
-                            {portfolio.settings.profitTrailing?.enabled && (
-                              <Badge variant="outline" className="text-xs bg-green-100 text-green-700 border-green-200">
-                                Profit Trail
-                              </Badge>
-                            )}
-                            {portfolio.settings.retryMechanism?.entryOrderRetry && (
-                              <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-200">
-                                Retry
-                              </Badge>
-                            )}
-                          </div>
-                        )}
+                          <Button
+                            variant={isSelected ? "destructive" : "outline"}
+                            size="sm"
+                            onClick={() => (isSelected ? handleUserRemoval(user.id) : handleUserSelection(user))}
+                            disabled={!user.enabled}
+                          >
+                            {isSelected ? "Remove" : "Add"}
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Selected Users Summary */}
+              {selectedUsers.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium mb-3">Selected Users ({selectedUsers.length})</h3>
+                  <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-3 border border-indigo-200 dark:border-indigo-800">
+                    <div className="flex flex-wrap gap-2">
+                      {selectedUsers.map((user) => (
+                        <Badge key={user.id} variant="outline" className="bg-white dark:bg-gray-800">
+                          {user.alias} (x{user.multiplier})
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter className="p-6 pt-2">
+            <div className="flex justify-between w-full">
+              <Button variant="outline" onClick={() => setShowUserAssignDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveUserAssignments} className="bg-indigo-600 hover:bg-indigo-700">
+                Save Assignments
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Retry Mechanism Dialog */}
+      <Dialog open={showRetryMechanismDialog} onOpenChange={setShowRetryMechanismDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Retry Mechanism Settings</DialogTitle>
+            <DialogDescription>Configure order retry settings for failed orders</DialogDescription>
+          </DialogHeader>
+          <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium flex items-center">
+                  <RefreshCw className="h-4 w-4 mr-2 text-amber-500" />
+                  Entry Order Retry Settings
+                </h3>
+
+                <div className="flex items-center space-x-2 mb-4">
+                  <Switch
+                    id="entryOrderRetry"
+                    checked={retrySettings.entryOrderRetry}
+                    onCheckedChange={(checked) => setRetrySettings({ ...retrySettings, entryOrderRetry: checked })}
+                  />
+                  <Label htmlFor="entryOrderRetry">Enable Entry Order Retry</Label>
+                </div>
+
+                {retrySettings.entryOrderRetry && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6 border-l-2 border-amber-200">
+                    <div>
+                      <Label htmlFor="entryRetryCount" className="text-xs">
+                        Entry Retry Count
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="entryRetryCount"
+                          type="number"
+                          min="1"
+                          max="10"
+                          value={retrySettings.entryRetryCount}
+                          onChange={(e) =>
+                            setRetrySettings({ ...retrySettings, entryRetryCount: Number(e.target.value) })
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="entryRetryWaitSeconds" className="text-xs">
+                        Wait Between Retries (seconds)
+                      </Label>
+                      <div className="relative">
+                        <Clock className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          id="entryRetryWaitSeconds"
+                          type="number"
+                          min="1"
+                          max="60"
+                          value={retrySettings.entryRetryWaitSeconds}
+                          onChange={(e) =>
+                            setRetrySettings({ ...retrySettings, entryRetryWaitSeconds: Number(e.target.value) })
+                          }
+                          className="pl-8"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="entryMaxWaitSeconds" className="text-xs">
+                        Maximum Wait Time (seconds)
+                      </Label>
+                      <div className="relative">
+                        <Clock className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          id="entryMaxWaitSeconds"
+                          type="number"
+                          min="5"
+                          max="300"
+                          value={retrySettings.entryMaxWaitSeconds}
+                          onChange={(e) =>
+                            setRetrySettings({ ...retrySettings, entryMaxWaitSeconds: Number(e.target.value) })
+                          }
+                          className="pl-8"
+                        />
                       </div>
                     </div>
                   </div>
-                )
-              })}
-            </div>
-          )}
+                )}
+              </div>
 
-          {selectedPortfoliosForLive.length > 0 && (
-            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-              <h4 className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">
-                Selected Portfolios ({selectedPortfoliosForLive.length})
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {portfolios
-                  .filter((p) => selectedPortfoliosForLive.includes(p.id))
-                  .map((portfolio) => (
-                    <Badge
-                      key={portfolio.id}
-                      variant="outline"
-                      className="bg-white dark:bg-gray-800 text-red-700 border-red-300"
-                    >
-                      {portfolio.name}
-                    </Badge>
-                  ))}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium flex items-center">
+                  <ArrowRightLeft className="h-4 w-4 mr-2 text-red-500" />
+                  Exit Order Retry Settings
+                </h3>
+
+                <div className="flex items-center space-x-2 mb-4">
+                  <Switch
+                    id="exitOrderRetry"
+                    checked={retrySettings.exitOrderRetry}
+                    onCheckedChange={(checked) => setRetrySettings({ ...retrySettings, exitOrderRetry: checked })}
+                  />
+                  <Label htmlFor="exitOrderRetry">Enable Exit Order Retry</Label>
+                </div>
+
+                {retrySettings.exitOrderRetry && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6 border-l-2 border-red-200">
+                    <div>
+                      <Label htmlFor="exitRetryCount" className="text-xs">
+                        Exit Retry Count
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="exitRetryCount"
+                          type="number"
+                          min="1"
+                          max="10"
+                          value={retrySettings.exitRetryCount}
+                          onChange={(e) =>
+                            setRetrySettings({ ...retrySettings, exitRetryCount: Number(e.target.value) })
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="exitRetryWaitSeconds" className="text-xs">
+                        Wait Between Retries (seconds)
+                      </Label>
+                      <div className="relative">
+                        <Clock className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          id="exitRetryWaitSeconds"
+                          type="number"
+                          min="1"
+                          max="60"
+                          value={retrySettings.exitRetryWaitSeconds}
+                          onChange={(e) =>
+                            setRetrySettings({ ...retrySettings, exitRetryWaitSeconds: Number(e.target.value) })
+                          }
+                          className="pl-8"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="exitMaxWaitSeconds" className="text-xs">
+                        Maximum Wait Time (seconds)
+                      </Label>
+                      <div className="relative">
+                        <Clock className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          id="exitMaxWaitSeconds"
+                          type="number"
+                          min="5"
+                          max="300"
+                          value={retrySettings.exitMaxWaitSeconds}
+                          onChange={(e) =>
+                            setRetrySettings({ ...retrySettings, exitMaxWaitSeconds: Number(e.target.value) })
+                          }
+                          className="pl-8"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          )}
-        </div>
-      </SimpleDialog>
+          </div>
+          <DialogFooter className="p-6 pt-2">
+            <div className="flex justify-between w-full">
+              <Button variant="outline" onClick={() => setShowRetryMechanismDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveRetrySettings} className="bg-amber-600 hover:bg-amber-700">
+                Save Settings
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      <Toaster position="top-right" />
+      {/* Profit Locking Dialog */}
+      <Dialog open={showProfitLockingDialog} onOpenChange={setShowProfitLockingDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Profit Locking Settings</DialogTitle>
+            <DialogDescription>Configure profit locking to secure profits</DialogDescription>
+          </DialogHeader>
+          <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2 mb-4">
+                  <Switch
+                    id="profitLockingEnabled"
+                    checked={profitLockingSettings.enabled}
+                    onCheckedChange={(checked) =>
+                      setProfitLockingSettings({ ...profitLockingSettings, enabled: checked })
+                    }
+                  />
+                  <Label htmlFor="profitLockingEnabled">Enable Profit Locking</Label>
+                </div>
+
+                {profitLockingSettings.enabled && (
+                  <div className="space-y-4 pl-6 border-l-2 border-blue-200">
+                    <div>
+                      <Label htmlFor="profitThreshold" className="text-xs">
+                        If Profit Reaches (₹)
+                      </Label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-green-500" />
+                        <Input
+                          id="profitThreshold"
+                          type="number"
+                          min="0"
+                          value={profitLockingSettings.profitThreshold}
+                          onChange={(e) =>
+                            setProfitLockingSettings({
+                              ...profitLockingSettings,
+                              profitThreshold: Number(e.target.value),
+                            })
+                          }
+                          className="pl-8"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        The profit amount that triggers the profit locking mechanism
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="minimumProfitLock" className="text-xs">
+                        Lock Minimum Profit At (₹)
+                      </Label>
+                      <div className="relative">
+                        <Lock className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-blue-500" />
+                        <Input
+                          id="minimumProfitLock"
+                          type="number"
+                          min="0"
+                          value={profitLockingSettings.minimumProfitLock}
+                          onChange={(e) =>
+                            setProfitLockingSettings({
+                              ...profitLockingSettings,
+                              minimumProfitLock: Number(e.target.value),
+                            })
+                          }
+                          className="pl-8"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        The minimum profit amount that will be secured
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="p-6 pt-2">
+            <div className="flex justify-between w-full">
+              <Button variant="outline" onClick={() => setShowProfitLockingDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveProfitLockingSettings} className="bg-blue-600 hover:bg-blue-700">
+                Save Settings
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Profit Trailing Dialog */}
+      <Dialog open={showProfitTrailingDialog} onOpenChange={setShowProfitTrailingDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Profit Trailing Settings</DialogTitle>
+            <DialogDescription>Configure profit trailing to maximize profits</DialogDescription>
+          </DialogHeader>
+          <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2 mb-4">
+                  <Switch
+                    id="profitTrailingEnabled"
+                    checked={profitTrailingSettings.enabled}
+                    onCheckedChange={(checked) =>
+                      setProfitTrailingSettings({ ...profitTrailingSettings, enabled: checked })
+                    }
+                  />
+                  <Label htmlFor="profitTrailingEnabled">Enable Profit Trailing</Label>
+                </div>
+
+                {profitTrailingSettings.enabled && (
+                  <div className="space-y-4 pl-6 border-l-2 border-green-200">
+                    <div>
+                      <Label htmlFor="increaseBy" className="text-xs">
+                        Every Increase In Profit By (₹)
+                      </Label>
+                      <div className="relative">
+                        <TrendingUp className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-green-500" />
+                        <Input
+                          id="increaseBy"
+                          type="number"
+                          min="0"
+                          value={profitTrailingSettings.increaseBy}
+                          onChange={(e) =>
+                            setProfitTrailingSettings({
+                              ...profitTrailingSettings,
+                              increaseBy: Number(e.target.value),
+                            })
+                          }
+                          className="pl-8"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        The profit increase amount that triggers the trailing mechanism
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="trailBy" className="text-xs">
+                        Trail Profit By (₹)
+                      </Label>
+                      <div className="relative">
+                        <ArrowRightLeft className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-green-500" />
+                        <Input
+                          id="trailBy"
+                          type="number"
+                          min="0"
+                          value={profitTrailingSettings.trailBy}
+                          onChange={(e) =>
+                            setProfitTrailingSettings({
+                              ...profitTrailingSettings,
+                              trailBy: Number(e.target.value),
+                            })
+                          }
+                          className="pl-8"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        The amount by which the stop loss will be trailed
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="p-6 pt-2">
+            <div className="flex justify-between w-full">
+              <Button variant="outline" onClick={() => setShowProfitTrailingDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveProfitTrailingSettings} className="bg-green-600 hover:bg-green-700">
+                Save Settings
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Go Live Dialog */}
+      <Dialog open={showGoLiveDialog} onOpenChange={setShowGoLiveDialog}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Select Portfolios to Go Live</DialogTitle>
+            <DialogDescription>Choose which portfolios you want to activate for live trading</DialogDescription>
+          </DialogHeader>
+
+          <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
+            <div className="space-y-4">
+              {portfolios.length === 0 ? (
+                <div className="text-center py-8">
+                  <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No Portfolios Available</h3>
+                  <p className="text-muted-foreground">Create some portfolios first to go live with trading.</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {portfolios.map((portfolio) => {
+                    const isSelected = selectedPortfoliosForLive.includes(portfolio.id)
+
+                    return (
+                      <div
+                        key={portfolio.id}
+                        className={`flex items-center p-4 rounded-lg border transition-all cursor-pointer ${
+                          isSelected
+                            ? "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
+                            : "bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        }`}
+                        onClick={() => handlePortfolioSelection(portfolio.id)}
+                      >
+                        <div className="flex items-center space-x-3 flex-1">
+                          <div className="flex-shrink-0">
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => handlePortfolioSelection(portfolio.id)}
+                              className="h-4 w-4"
+                            />
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                                  {portfolio.name}
+                                </h4>
+                                <div className="flex items-center mt-1 space-x-4">
+                                  <span className="text-xs text-gray-500 flex items-center">
+                                    <Calendar className="h-3 w-3 mr-1" />
+                                    {formatDate(portfolio.timestamp)}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    {portfolio.strategiesCount}{" "}
+                                    {portfolio.strategiesCount === 1 ? "Strategy" : "Strategies"}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center space-x-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {portfolio.type || "Other"}
+                                </Badge>
+                                {portfolio.settings.assignedUsers && portfolio.settings.assignedUsers.length > 0 && (
+                                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                    {portfolio.settings.assignedUsers.length} User(s)
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="mt-2 grid grid-cols-2 gap-4 text-xs">
+                              <div className="flex items-center">
+                                <DollarSign className="h-3 w-3 mr-1 text-green-500" />
+                                <span className="text-gray-500">Max Profit:</span>
+                                <span className="ml-1 font-medium">₹{portfolio.settings.maxProfit || "0"}</span>
+                              </div>
+                              <div className="flex items-center">
+                                <Shield className="h-3 w-3 mr-1 text-red-500" />
+                                <span className="text-gray-500">Max Loss:</span>
+                                <span className="ml-1 font-medium">₹{portfolio.settings.maxLoss || "0"}</span>
+                              </div>
+                            </div>
+
+                            {(portfolio.settings.profitLocking?.enabled ||
+                              portfolio.settings.profitTrailing?.enabled ||
+                              portfolio.settings.retryMechanism?.entryOrderRetry) && (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {portfolio.settings.profitLocking?.enabled && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs bg-blue-100 text-blue-700 border-blue-200"
+                                  >
+                                    Profit Lock
+                                  </Badge>
+                                )}
+                                {portfolio.settings.profitTrailing?.enabled && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs bg-green-100 text-green-700 border-green-200"
+                                  >
+                                    Profit Trail
+                                  </Badge>
+                                )}
+                                {portfolio.settings.retryMechanism?.entryOrderRetry && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs bg-amber-100 text-amber-700 border-amber-200"
+                                  >
+                                    Retry
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {selectedPortfoliosForLive.length > 0 && (
+                <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                  <h4 className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">
+                    Selected Portfolios ({selectedPortfoliosForLive.length})
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {portfolios
+                      .filter((p) => selectedPortfoliosForLive.includes(p.id))
+                      .map((portfolio) => (
+                        <Badge
+                          key={portfolio.id}
+                          variant="outline"
+                          className="bg-white dark:bg-gray-800 text-red-700 border-red-300"
+                        >
+                          {portfolio.name}
+                        </Badge>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="p-6 pt-2">
+            <div className="flex justify-between w-full">
+              <Button variant="outline" onClick={() => setShowGoLiveDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleExecuteGoLive}
+                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+                disabled={selectedPortfoliosForLive.length === 0}
+              >
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></div>
+                  Go Live ({selectedPortfoliosForLive.length})
+                </div>
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
-  )
-}
-
-function SimpleDialog({ children, title, description, open, onOpenChange, size, footer }) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={size === "lg" ? "max-w-3xl" : "max-w-md"}>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        {children}
-        <DialogFooter>{footer}</DialogFooter>
-      </DialogContent>
-    </Dialog>
   )
 }
 
