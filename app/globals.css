@@ -56,23 +56,112 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Add hover animations for headings */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  h1:hover {
+    @apply text-primary scale-[1.02];
+  }
+
+  h2:hover {
+    @apply text-primary scale-[1.015];
+  }
+
+  h3:hover,
+  h4:hover,
+  h5:hover,
+  h6:hover {
+    @apply text-primary scale-[1.01];
+  }
 }
 
-/* Custom scrollbar for the dashboard */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+@layer utilities {
+  .animate-gradient {
+    background-size: 200% auto;
+    animation: gradient 8s linear infinite;
+  }
+
+  @keyframes gradient {
+    0% {
+      background-position: 0% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
+  }
+
+  .animate-float-slow {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-float-medium {
+    animation: float 4s ease-in-out infinite;
+  }
+
+  .animate-float-fast {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-5px);
+    }
+  }
+
+  .animate-ping-slow {
+    animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+
+  @keyframes ping {
+    75%,
+    100% {
+      transform: scale(1.5);
+      opacity: 0;
+    }
+  }
+
+  .animate-bell-ring {
+    animation: bell-ring 0.8s ease-in-out;
+  }
+
+  @keyframes bell-ring {
+    0%,
+    100% {
+      transform: rotate(0deg) scale(1);
+    }
+    20% {
+      transform: rotate(15deg) scale(1.1);
+    }
+    40% {
+      transform: rotate(-13deg) scale(1.08);
+    }
+    60% {
+      transform: rotate(9deg) scale(1.06);
+    }
+    80% {
+      transform: rotate(-7deg) scale(1.04);
+    }
+  }
 }
 
-::-webkit-scrollbar-track {
-  background: #1e293b;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #475569;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+/* Optimize animations for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
