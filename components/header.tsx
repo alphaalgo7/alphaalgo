@@ -41,12 +41,20 @@ export function Header() {
   }, [pathname])
 
   const navItems = [
-    { name: "Create Strategy", href: "/", icon: <Plus className="h-4 w-4 stroke-[2.5px]" /> },
-    { name: "Strategies", href: "/strategies", icon: <TrendingUp className="h-4 w-4 stroke-[2.5px]" /> },
-    { name: "Portfolios", href: "/portfolios", icon: <Briefcase className="h-4 w-4 stroke-[2.5px]" /> },
-    { name: "Logs", href: "/logs", icon: <ClipboardList className="h-4 w-4 stroke-[2.5px]" /> },
-    { name: "Live Monitor", href: "/live-monitor", icon: <LineChart className="h-4 w-4 stroke-[2.5px]" /> },
-    { name: "User Settings", href: "/user-settings", icon: <User className="h-4 w-4 stroke-[2.5px]" /> },
+    {
+      name: "Create Strategy",
+      href: "/",
+      icon: <Plus className="h-4 w-4 stroke-[2.5px] flex-shrink-0" />,
+    },
+    { name: "Strategies", href: "/strategies", icon: <TrendingUp className="h-4 w-4 stroke-[2.5px] flex-shrink-0" /> },
+    { name: "Portfolios", href: "/portfolios", icon: <Briefcase className="h-4 w-4 stroke-[2.5px] flex-shrink-0" /> },
+    { name: "Logs", href: "/logs", icon: <ClipboardList className="h-4 w-4 stroke-[2.5px] flex-shrink-0" /> },
+    {
+      name: "Live Monitor",
+      href: "/live-monitor",
+      icon: <LineChart className="h-4 w-4 stroke-[2.5px] flex-shrink-0" />,
+    },
+    { name: "User Settings", href: "/user-settings", icon: <User className="h-4 w-4 stroke-[2.5px] flex-shrink-0" /> },
   ]
 
   return (
@@ -117,7 +125,7 @@ export function Header() {
                 </span>
 
                 {/* Icon with special animation */}
-                <span className="mr-2 relative z-10 transition-all duration-500 group-hover:scale-125 group-hover:rotate-12 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                <span className="mr-2 relative z-10 transition-all duration-500 group-hover:scale-125 group-hover:rotate-12 group-hover:text-blue-600 dark:group-hover:text-blue-400 flex items-center justify-center">
                   {item.icon}
 
                   {/* Icon glow effect */}
@@ -282,7 +290,7 @@ export function Header() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {/* Icon with animation */}
-                <span className="mr-3 relative z-10 transition-all duration-300 group-hover:scale-110 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                <span className="mr-3 relative z-10 transition-all duration-300 group-hover:scale-110 group-hover:text-blue-600 dark:group-hover:text-blue-400 flex items-center justify-center flex-shrink-0">
                   {item.icon}
                 </span>
 

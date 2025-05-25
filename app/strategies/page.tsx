@@ -64,6 +64,7 @@ export default function StrategiesPage() {
         setStrategies(loadedStrategies)
       } catch (error) {
         console.error("Error loading strategies:", error)
+        // Don't call toast here
       } finally {
         setIsLoading(false)
       }
@@ -89,7 +90,8 @@ export default function StrategiesPage() {
 
   // Handle add strategy
   const handleAddStrategy = useCallback(() => {
-    router.push("/")
+    router.push("/") // Navigate to create strategy page
+    // Remove the toast call here
   }, [router])
 
   // Handle delete strategy
@@ -101,7 +103,9 @@ export default function StrategiesPage() {
   // Handle edit strategy
   const handleEditStrategy = useCallback(
     (id: number) => {
+      // Navigate to create strategy page with the strategy ID
       router.push(`/?strategyId=${id}`)
+      // Remove the toast call here
     },
     [router],
   )
@@ -110,9 +114,15 @@ export default function StrategiesPage() {
   const confirmDeleteStrategy = useCallback(async () => {
     if (strategyToDelete) {
       try {
+        // Get existing strategies
         const updatedStrategies = strategies.filter((strategy) => strategy.id !== strategyToDelete)
+
+        // Save updated strategies
         localStorage.setItem("strategies", JSON.stringify(updatedStrategies))
+
+        // Update state
         setStrategies(updatedStrategies)
+
         setDeleteSuccess(true)
       } catch (error) {
         console.error("Error deleting strategy:", error)
@@ -143,6 +153,7 @@ export default function StrategiesPage() {
   // Handle add to portfolio
   const handleAddToPortfolio = () => {
     if (selectedStrategies.length === 0) {
+      // Move toast call to a useEffect
       setPortfolioError("Please select at least one strategy")
       return
     }
@@ -158,16 +169,19 @@ export default function StrategiesPage() {
 
     setIsSaving(true)
     try {
+      // Get selected strategies
       const selectedStrategyObjects = strategies.filter((strategy) => selectedStrategies.includes(strategy.id))
 
+      // Create portfolio object
       const portfolioData = {
         name: portfolioName,
         strategies: selectedStrategyObjects,
         timestamp: new Date().toISOString(),
         type: "portfolio",
         isRealPortfolio: true,
-        createdFromStrategies: true,
+        createdFromStrategies: true, // Add this flag to indicate it was created from strategies page
         settings: {
+          // Add default settings
           maxProfit: 0,
           maxLoss: 0,
           profitLocking: false,
@@ -181,13 +195,19 @@ export default function StrategiesPage() {
         },
       }
 
+      // Save with portfolio prefix
       const portfolioKey = `portfolio_${Date.now()}`
       localStorage.setItem(portfolioKey, JSON.stringify(portfolioData))
 
+      console.log("Portfolio saved:", portfolioKey, portfolioData)
+
+      // Set success message instead of calling toast directly
       setPortfolioSuccess(`Portfolio "${portfolioName}" created with ${selectedStrategies.length} strategies`)
       setPortfolioDialogOpen(false)
       setPortfolioName("")
       setSelectedStrategies([])
+
+      // Set flag to navigate to portfolios page
       setNavigateToPortfolios(true)
     } catch (error) {
       console.error("Error saving portfolio:", error)
@@ -197,11 +217,14 @@ export default function StrategiesPage() {
     }
   }
 
+  // Use a ref to track if navigation is in progress
   const navigationInProgress = useRef(false)
 
+  // Navigate to portfolios page after successful save
   useEffect(() => {
     if (navigateToPortfolios && !navigationInProgress.current) {
       navigationInProgress.current = true
+      // Wait a moment for the toast to be visible
       const timer = setTimeout(() => {
         router.push("/portfolios")
       }, 1000)
@@ -228,7 +251,7 @@ export default function StrategiesPage() {
     return tagMap[tag] || "bg-gradient-to-r from-slate-500 to-slate-600 text-white"
   }
 
-  // Toast useEffects
+  // Toast useEffects - ensure these are properly separated
   useEffect(() => {
     if (refreshSuccess) {
       toast.success("Strategies refreshed successfully")
@@ -271,8 +294,18 @@ export default function StrategiesPage() {
     }
   }, [portfolioSuccess])
 
+  // Ensure proper cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (navigationInProgress.current) {
+        navigationInProgress.current = false
+      }
+    }
+  }, [])
+
   return (
     <div className="container mx-auto p-4 space-y-6">
+      {/* Page Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b">
         <div>
           <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-slate-700 to-slate-900 dark:from-slate-200 dark:to-white bg-clip-text text-transparent">
@@ -316,6 +349,7 @@ export default function StrategiesPage() {
         </div>
       </div>
 
+      {/* Search Bar */}
       <div className="flex flex-col sm:flex-row items-center gap-4">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -328,6 +362,7 @@ export default function StrategiesPage() {
         </div>
       </div>
 
+      {/* Strategies Table */}
       <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
         <CardHeader className="bg-gradient-to-r from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 pb-2">
           <CardTitle>Strategy Settings</CardTitle>
@@ -386,12 +421,24 @@ export default function StrategiesPage() {
                           </div>
                         </td>
                         <td className="p-4 align-middle font-medium text-emerald-600 dark:text-emerald-400">
-                          {strategy.maxProfit}
+                          ₹{strategy.maxProfit}
                         </td>
                         <td className="p-4 align-middle font-medium text-rose-600 dark:text-rose-400">
-                          {strategy.maxLoss}
+                          ₹{strategy.maxLoss}
                         </td>
-                        <td className="p-4 align-middle">{strategy.profitLocking}</td>
+                        <td className="p-4 align-middle">
+                          <div
+                            className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                              strategy.profitLocking !== "0~0~0~0" && strategy.profitLocking !== "0"
+                                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                                : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+                            }`}
+                          >
+                            {strategy.profitLocking !== "0~0~0~0" && strategy.profitLocking !== "0"
+                              ? "Enabled"
+                              : "Disabled"}
+                          </div>
+                        </td>
                         <td className="p-4 align-middle">
                           <div className="flex gap-2">
                             <Button
@@ -435,10 +482,12 @@ export default function StrategiesPage() {
         </CardContent>
       </Card>
 
+      {/* Status Footer */}
       <div className="text-sm text-muted-foreground border-t pt-4 mt-2">
         Showing {filteredStrategies.length} of {strategies.length} strategies • {selectedStrategies.length} selected
       </div>
 
+      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -458,6 +507,7 @@ export default function StrategiesPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Add to Portfolio Dialog */}
       <Dialog open={portfolioDialogOpen} onOpenChange={setPortfolioDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -514,6 +564,7 @@ export default function StrategiesPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Toast notifications */}
       <Toaster />
     </div>
   )
