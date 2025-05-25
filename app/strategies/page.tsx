@@ -427,16 +427,14 @@ export default function StrategiesPage() {
                           ₹{strategy.maxLoss}
                         </td>
                         <td className="p-4 align-middle">
-                          <div
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                              strategy.profitLocking !== "0~0~0~0" && strategy.profitLocking !== "0"
-                                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                                : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
-                            }`}
-                          >
-                            {strategy.profitLocking !== "0~0~0~0" && strategy.profitLocking !== "0"
-                              ? "Enabled"
-                              : "Disabled"}
+                          <div className="text-sm">
+                            {strategy.profitLocking !== "0~0~0~0" && strategy.profitLocking !== "0" ? (
+                              <span className="font-medium text-green-600 dark:text-green-400">
+                                {strategy.profitLocking}
+                              </span>
+                            ) : (
+                              <span className="text-gray-500 dark:text-gray-400">Disabled</span>
+                            )}
                           </div>
                         </td>
                         <td className="p-4 align-middle">

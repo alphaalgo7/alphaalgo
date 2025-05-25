@@ -451,17 +451,6 @@ export function ExecutionParameters() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex gap-1 flex-wrap">
-                        <Button variant="outline" size="sm" className="text-xs h-6 px-2 bg-white hover:bg-blue-50">
-                          09:15:00
-                        </Button>
-                        <Button variant="outline" size="sm" className="text-xs h-6 px-2 bg-white hover:bg-blue-50">
-                          09:30:00
-                        </Button>
-                        <Button variant="outline" size="sm" className="text-xs h-6 px-2 bg-white hover:bg-blue-50">
-                          10:00:00
-                        </Button>
-                      </div>
                     </div>
 
                     <div className="space-y-3">
@@ -562,17 +551,6 @@ export function ExecutionParameters() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex gap-1 flex-wrap">
-                        <Button variant="outline" size="sm" className="text-xs h-6 px-2 bg-white hover:bg-blue-50">
-                          15:15:00
-                        </Button>
-                        <Button variant="outline" size="sm" className="text-xs h-6 px-2 bg-white hover:bg-blue-50">
-                          15:20:00
-                        </Button>
-                        <Button variant="outline" size="sm" className="text-xs h-6 px-2 bg-white hover:bg-blue-50">
-                          15:25:00
-                        </Button>
-                      </div>
                     </div>
 
                     <div className="space-y-3">
@@ -672,14 +650,6 @@ export function ExecutionParameters() {
                             </button>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex gap-1 flex-wrap">
-                        <Button variant="outline" size="sm" className="text-xs h-6 px-2 bg-white hover:bg-blue-50">
-                          15:25:00
-                        </Button>
-                        <Button variant="outline" size="sm" className="text-xs h-6 px-2 bg-white hover:bg-blue-50">
-                          15:30:00
-                        </Button>
                       </div>
                     </div>
                   </div>
