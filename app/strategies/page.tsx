@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Toaster } from "@/components/ui/sonner"
 import { Edit, RotateCw, Search, RefreshCw, Plus, Trash2, FolderPlus } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -63,7 +64,6 @@ export default function StrategiesPage() {
         setStrategies(loadedStrategies)
       } catch (error) {
         console.error("Error loading strategies:", error)
-        // Don't call toast here
       } finally {
         setIsLoading(false)
       }
@@ -89,8 +89,7 @@ export default function StrategiesPage() {
 
   // Handle add strategy
   const handleAddStrategy = useCallback(() => {
-    router.push("/") // Navigate to create strategy page
-    // Remove the toast call here
+    router.push("/")
   }, [router])
 
   // Handle delete strategy
@@ -102,9 +101,7 @@ export default function StrategiesPage() {
   // Handle edit strategy
   const handleEditStrategy = useCallback(
     (id: number) => {
-      // Navigate to create strategy page with the strategy ID
       router.push(`/?strategyId=${id}`)
-      // Remove the toast call here
     },
     [router],
   )
@@ -113,15 +110,9 @@ export default function StrategiesPage() {
   const confirmDeleteStrategy = useCallback(async () => {
     if (strategyToDelete) {
       try {
-        // Get existing strategies
         const updatedStrategies = strategies.filter((strategy) => strategy.id !== strategyToDelete)
-
-        // Save updated strategies
         localStorage.setItem("strategies", JSON.stringify(updatedStrategies))
-
-        // Update state
         setStrategies(updatedStrategies)
-
         setDeleteSuccess(true)
       } catch (error) {
         console.error("Error deleting strategy:", error)
@@ -152,7 +143,6 @@ export default function StrategiesPage() {
   // Handle add to portfolio
   const handleAddToPortfolio = () => {
     if (selectedStrategies.length === 0) {
-      // Move toast call to a useEffect
       setPortfolioError("Please select at least one strategy")
       return
     }
@@ -168,19 +158,16 @@ export default function StrategiesPage() {
 
     setIsSaving(true)
     try {
-      // Get selected strategies
       const selectedStrategyObjects = strategies.filter((strategy) => selectedStrategies.includes(strategy.id))
 
-      // Create portfolio object
       const portfolioData = {
         name: portfolioName,
         strategies: selectedStrategyObjects,
         timestamp: new Date().toISOString(),
         type: "portfolio",
         isRealPortfolio: true,
-        createdFromStrategies: true, // Add this flag to indicate it was created from strategies page
+        createdFromStrategies: true,
         settings: {
-          // Add default settings
           maxProfit: 0,
           maxLoss: 0,
           profitLocking: false,
@@ -194,19 +181,13 @@ export default function StrategiesPage() {
         },
       }
 
-      // Save with portfolio prefix
       const portfolioKey = `portfolio_${Date.now()}`
       localStorage.setItem(portfolioKey, JSON.stringify(portfolioData))
 
-      console.log("Portfolio saved:", portfolioKey, portfolioData)
-
-      // Set success message instead of calling toast directly
       setPortfolioSuccess(`Portfolio "${portfolioName}" created with ${selectedStrategies.length} strategies`)
       setPortfolioDialogOpen(false)
       setPortfolioName("")
       setSelectedStrategies([])
-
-      // Set flag to navigate to portfolios page
       setNavigateToPortfolios(true)
     } catch (error) {
       console.error("Error saving portfolio:", error)
@@ -216,14 +197,11 @@ export default function StrategiesPage() {
     }
   }
 
-  // Use a ref to track if navigation is in progress
   const navigationInProgress = useRef(false)
 
-  // Navigate to portfolios page after successful save
   useEffect(() => {
     if (navigateToPortfolios && !navigationInProgress.current) {
       navigationInProgress.current = true
-      // Wait a moment for the toast to be visible
       const timer = setTimeout(() => {
         router.push("/portfolios")
       }, 1000)
@@ -250,7 +228,7 @@ export default function StrategiesPage() {
     return tagMap[tag] || "bg-gradient-to-r from-slate-500 to-slate-600 text-white"
   }
 
-  // Toast useEffects - ensure these are properly separated
+  // Toast useEffects
   useEffect(() => {
     if (refreshSuccess) {
       toast.success("Strategies refreshed successfully")
@@ -295,7 +273,6 @@ export default function StrategiesPage() {
 
   return (
     <div className="container mx-auto p-4 space-y-6">
-      {/* Page Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b">
         <div>
           <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-slate-700 to-slate-900 dark:from-slate-200 dark:to-white bg-clip-text text-transparent">
@@ -339,7 +316,6 @@ export default function StrategiesPage() {
         </div>
       </div>
 
-      {/* Search Bar */}
       <div className="flex flex-col sm:flex-row items-center gap-4">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -352,193 +328,117 @@ export default function StrategiesPage() {
         </div>
       </div>
 
-      {/* Strategies Table */}
-      <div className="bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden">
-        {/* Enhanced Header */}
-        <div className="bg-gradient-to-r from-slate-50 via-white to-slate-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-1">Strategy Management</h2>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                Configure and organize your trading strategies
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-              <div className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">
-                {filteredStrategies.length} strategies
-              </div>
-              {selectedStrategies.length > 0 && (
-                <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full">
-                  {selectedStrategies.length} selected
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Enhanced Table */}
-        <div className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 dark:from-slate-800 dark:via-slate-850 dark:to-slate-800 border-b border-slate-200 dark:border-slate-700">
-                  <th className="h-12 px-4 text-left font-semibold text-slate-700 dark:text-slate-300 w-12">
-                    <div className="flex items-center justify-center">
-                      <Checkbox
-                        checked={
-                          selectedStrategies.length > 0 && selectedStrategies.length === filteredStrategies.length
-                        }
-                        onCheckedChange={handleSelectAll}
-                        aria-label="Select all"
-                        className="border-slate-400 dark:border-slate-500"
-                      />
-                    </div>
-                  </th>
-                  <th className="h-12 px-6 text-left font-semibold text-slate-700 dark:text-slate-300">
-                    Strategy Details
-                  </th>
-                  <th className="h-12 px-6 text-left font-semibold text-slate-700 dark:text-slate-300">Max Profit</th>
-                  <th className="h-12 px-6 text-left font-semibold text-slate-700 dark:text-slate-300">Max Loss</th>
-                  <th className="h-12 px-6 text-left font-semibold text-slate-700 dark:text-slate-300">
-                    Profit Locking
-                  </th>
-                  <th className="h-12 px-6 text-left font-semibold text-slate-700 dark:text-slate-300">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filteredStrategies.length > 0 ? (
-                  filteredStrategies.map((strategy, index) => (
-                    <tr
-                      key={strategy.id}
-                      className={`transition-all duration-200 hover:bg-slate-50 dark:hover:bg-slate-900/50 ${
-                        selectedStrategies.includes(strategy.id)
-                          ? "bg-blue-50 dark:bg-blue-950/20 border-l-4 border-l-blue-500"
-                          : index % 2 === 0
-                            ? "bg-white dark:bg-slate-950"
-                            : "bg-slate-50/50 dark:bg-slate-900/30"
-                      }`}
-                    >
-                      <td className="p-4 align-middle">
-                        <div className="flex items-center justify-center">
-                          <Checkbox
-                            checked={selectedStrategies.includes(strategy.id)}
-                            onCheckedChange={() => handleSelectStrategy(strategy.id)}
-                            aria-label={`Select ${strategy.name}`}
-                            className="border-slate-400 dark:border-slate-500"
-                          />
-                        </div>
-                      </td>
-                      <td className="p-6 align-middle">
-                        <div className="space-y-2">
-                          <div className="font-semibold text-slate-900 dark:text-slate-100 text-base">
-                            {strategy.name}
+      <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+        <CardHeader className="bg-gradient-to-r from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 pb-2">
+          <CardTitle>Strategy Settings</CardTitle>
+          <CardDescription>Manage your saved trading strategies</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                    <th className="h-10 px-2 text-left font-medium w-10">
+                      <div className="flex items-center justify-center">
+                        <Checkbox
+                          checked={
+                            selectedStrategies.length > 0 && selectedStrategies.length === filteredStrategies.length
+                          }
+                          onCheckedChange={handleSelectAll}
+                          aria-label="Select all"
+                        />
+                      </div>
+                    </th>
+                    <th className="h-10 px-4 text-left font-medium">Strategy Name</th>
+                    <th className="h-10 px-4 text-left font-medium">Max Profit</th>
+                    <th className="h-10 px-4 text-left font-medium">Max Loss</th>
+                    <th className="h-10 px-4 text-left font-medium">Profit Locking</th>
+                    <th className="h-10 px-4 text-left font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredStrategies.length > 0 ? (
+                    filteredStrategies.map((strategy) => (
+                      <tr
+                        key={strategy.id}
+                        className="border-b border-slate-200 dark:border-slate-800 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                      >
+                        <td className="p-2 align-middle">
+                          <div className="flex items-center justify-center">
+                            <Checkbox
+                              checked={selectedStrategies.includes(strategy.id)}
+                              onCheckedChange={() => handleSelectStrategy(strategy.id)}
+                              aria-label={`Select ${strategy.name}`}
+                            />
                           </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {strategy.tags.map((tag) => (
-                              <Badge
-                                key={tag}
-                                className={`${getTagColor(tag)} text-xs font-medium px-2.5 py-1 shadow-sm`}
-                              >
-                                {tag}
-                              </Badge>
-                            ))}
+                        </td>
+                        <td className="p-4 align-middle">
+                          <div>
+                            <div className="font-medium">{strategy.name}</div>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {strategy.tags.map((tag) => (
+                                <Badge key={tag} className={`${getTagColor(tag)} text-xs`}>
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="p-6 align-middle">
-                        <div className="font-semibold text-emerald-600 dark:text-emerald-400 text-base">
-                          ₹{strategy.maxProfit}
-                        </div>
-                      </td>
-                      <td className="p-6 align-middle">
-                        <div className="font-semibold text-rose-600 dark:text-rose-400 text-base">
-                          ₹{strategy.maxLoss}
-                        </div>
-                      </td>
-                      <td className="p-6 align-middle">
-                        <div
-                          className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                            strategy.profitLocking === "Enabled"
-                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                              : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
-                          }`}
-                        >
-                          {strategy.profitLocking}
-                        </div>
-                      </td>
-                      <td className="p-6 align-middle">
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-9 w-9 p-0 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 dark:hover:text-blue-400 rounded-lg transition-all"
-                            onClick={() => handleEditStrategy(strategy.id)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-9 w-9 p-0 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 dark:hover:text-rose-400 rounded-lg transition-all"
-                            onClick={() => handleDeleteStrategy(strategy.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        </td>
+                        <td className="p-4 align-middle font-medium text-emerald-600 dark:text-emerald-400">
+                          {strategy.maxProfit}
+                        </td>
+                        <td className="p-4 align-middle font-medium text-rose-600 dark:text-rose-400">
+                          {strategy.maxLoss}
+                        </td>
+                        <td className="p-4 align-middle">{strategy.profitLocking}</td>
+                        <td className="p-4 align-middle">
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-slate-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+                              onClick={() => handleEditStrategy(strategy.id)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-slate-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20"
+                              onClick={() => handleDeleteStrategy(strategy.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="h-24 text-center">
+                        {isLoading ? (
+                          <div className="flex justify-center items-center">
+                            <RotateCw className="h-5 w-5 animate-spin text-slate-400 mr-2" />
+                            <span>Loading strategies...</span>
+                          </div>
+                        ) : (
+                          "No strategies found."
+                        )}
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={6} className="h-32 text-center">
-                      {isLoading ? (
-                        <div className="flex justify-center items-center space-y-2">
-                          <div className="flex items-center text-slate-500 dark:text-slate-400">
-                            <RotateCw className="h-5 w-5 animate-spin mr-3" />
-                            <span className="text-base">Loading strategies...</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <div className="text-slate-400 dark:text-slate-500 text-lg">No strategies found</div>
-                          <div className="text-slate-500 dark:text-slate-400 text-sm">
-                            {searchTerm
-                              ? "Try adjusting your search criteria"
-                              : "Create your first strategy to get started"}
-                          </div>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Enhanced Footer */}
-        <div className="bg-gradient-to-r from-slate-50 via-white to-slate-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 border-t border-slate-200 dark:border-slate-800 px-6 py-4">
-          <div className="flex items-center justify-between text-sm">
-            <div className="text-slate-600 dark:text-slate-400">
-              Showing{" "}
-              <span className="font-medium text-slate-900 dark:text-slate-100">{filteredStrategies.length}</span> of{" "}
-              <span className="font-medium text-slate-900 dark:text-slate-100">{strategies.length}</span> strategies
+                  )}
+                </tbody>
+              </table>
             </div>
-            {selectedStrategies.length > 0 && (
-              <div className="text-blue-600 dark:text-blue-400 font-medium">
-                {selectedStrategies.length} strategies selected
-              </div>
-            )}
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* Status Footer */}
       <div className="text-sm text-muted-foreground border-t pt-4 mt-2">
         Showing {filteredStrategies.length} of {strategies.length} strategies • {selectedStrategies.length} selected
       </div>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -558,7 +458,6 @@ export default function StrategiesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Add to Portfolio Dialog */}
       <Dialog open={portfolioDialogOpen} onOpenChange={setPortfolioDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -615,7 +514,6 @@ export default function StrategiesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Toast notifications */}
       <Toaster />
     </div>
   )
