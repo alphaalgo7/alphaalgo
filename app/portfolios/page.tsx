@@ -35,6 +35,8 @@ import {
   Play,
   Square,
   AlertTriangle,
+  Eye,
+  EyeOff,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
@@ -82,6 +84,10 @@ export default function PortfolioList() {
   const [showSquareOffDialog, setShowSquareOffDialog] = useState(false)
   const [selectedPortfolioForSquareOff, setSelectedPortfolioForSquareOff] = useState(null)
   const [squareOffPositions, setSquareOffPositions] = useState([])
+
+  const [showStrategyManageDialog, setShowStrategyManageDialog] = useState(false)
+  const [selectedPortfolioForStrategies, setSelectedPortfolioForStrategies] = useState(null)
+  const [portfolioStrategies, setPortfolioStrategies] = useState([])
 
   // Retry mechanism settings
   const [retrySettings, setRetrySettings] = useState({
@@ -171,6 +177,7 @@ export default function PortfolioList() {
                 id: key,
                 name: portfolioData.name || "Unnamed Portfolio",
                 timestamp: portfolioData.timestamp || new Date().toISOString(),
+                strategies: strategies, // Include full strategy data
                 // Portfolio settings with defaults
                 settings: portfolioData.settings || {
                   maxProfit: 0,
@@ -225,6 +232,15 @@ export default function PortfolioList() {
         })
 
         setPortfolios(loadedPortfolios)
+
+        loadedPortfolios.forEach((portfolio) => {
+          const portfolioData = JSON.parse(localStorage.getItem(portfolio.id))
+          console.log("Portfolio loaded:", {
+            name: portfolioData.name,
+            assignedUsers: portfolioData.settings?.assignedUsers,
+            hasUsers: portfolioData.settings?.assignedUsers?.length > 0,
+          })
+        })
       } catch (error) {
         console.error("Error loading portfolios:", error)
         toast({
@@ -238,7 +254,7 @@ export default function PortfolioList() {
     }
 
     loadPortfolios()
-  }, [sortBy])
+  }, [sortBy, livePortfolios]) // Add livePortfolios as dependency to refresh when live status changes
 
   // Load available users from localStorage (from user settings page)
   const loadAvailableUsers = () => {
@@ -287,6 +303,34 @@ export default function PortfolioList() {
       toast({
         title: "Error",
         description: "Failed to save portfolio settings",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Save portfolio strategies
+  const savePortfolioStrategies = (portfolioId, updatedStrategies) => {
+    try {
+      const portfolioData = JSON.parse(localStorage.getItem(portfolioId))
+      portfolioData.strategies = updatedStrategies
+      localStorage.setItem(portfolioId, JSON.stringify(portfolioData))
+
+      // Update local state
+      setPortfolios(
+        portfolios.map((p) =>
+          p.id === portfolioId ? { ...p, strategies: updatedStrategies, strategiesCount: updatedStrategies.length } : p,
+        ),
+      )
+
+      toast({
+        title: "Success",
+        description: "Portfolio strategies updated successfully",
+      })
+    } catch (error) {
+      console.error("Error saving portfolio strategies:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save portfolio strategies",
         variant: "destructive",
       })
     }
@@ -384,6 +428,32 @@ export default function PortfolioList() {
 
       // Here you would implement the actual square off logic
       console.log("Squaring off positions for portfolio:", selectedPortfolioForSquareOff.id, squareOffPositions)
+    }
+  }
+
+  // Handle strategy management
+  const handleManageStrategies = (portfolioId, e) => {
+    e.stopPropagation()
+    const portfolio = portfolios.find((p) => p.id === portfolioId)
+    setSelectedPortfolioForStrategies(portfolio)
+    setPortfolioStrategies(portfolio.strategies || [])
+    setShowStrategyManageDialog(true)
+  }
+
+  // Handle strategy toggle
+  const handleStrategyToggle = (strategyId, enabled) => {
+    setPortfolioStrategies((prev) =>
+      prev.map((strategy) => (strategy.id === strategyId ? { ...strategy, enabled: enabled } : strategy)),
+    )
+  }
+
+  // Handle save strategy changes
+  const handleSaveStrategyChanges = () => {
+    if (selectedPortfolioForStrategies) {
+      savePortfolioStrategies(selectedPortfolioForStrategies.id, portfolioStrategies)
+      setShowStrategyManageDialog(false)
+      setSelectedPortfolioForStrategies(null)
+      setPortfolioStrategies([])
     }
   }
 
@@ -823,12 +893,12 @@ export default function PortfolioList() {
                         {formatDate(portfolio.timestamp)}
                       </CardDescription>
                     </div>
-                    <div className="flex items-center">
+                    <div className="flex items-center gap-1">
                       {isLive && (
                         <Button
                           variant="outline"
                           size="sm"
-                          className="mr-2 text-red-600 border-red-300 hover:bg-red-50"
+                          className="text-red-600 border-red-300 hover:bg-red-50 h-7 px-2 text-xs"
                           onClick={(e) => handleStopLive(portfolio.id, e)}
                         >
                           <Square className="h-3 w-3 mr-1" />
@@ -839,7 +909,7 @@ export default function PortfolioList() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-blue-500"
+                          className="h-7 w-7 text-blue-500"
                           onClick={(e) => {
                             e.stopPropagation()
                             setExpandedPortfolioId(null)
@@ -851,7 +921,7 @@ export default function PortfolioList() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-7 w-7"
                           onClick={(e) => {
                             e.stopPropagation()
                             handleCardClick(portfolio.id)
@@ -862,7 +932,7 @@ export default function PortfolioList() {
                       )}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button variant="ghost" size="icon" className="h-7 w-7">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -1047,59 +1117,118 @@ export default function PortfolioList() {
                     </div>
                   ) : (
                     // Collapsed view - just show summary
-                    <div className="grid grid-cols-2 gap-y-2 gap-x-4 mb-4">
-                      <div className="flex items-center text-sm">
-                        <DollarSign className="h-4 w-4 mr-2 text-green-500" />
-                        <span className="text-muted-foreground">Max Profit:</span>
-                        <span className="ml-auto font-medium">₹{portfolio.settings.maxProfit || "0"}</span>
-                      </div>
-                      <div className="flex items-center text-sm">
-                        <Shield className="h-4 w-4 mr-2 text-red-500" />
-                        <span className="text-muted-foreground">Max Loss:</span>
-                        <span className="ml-auto font-medium">₹{portfolio.settings.maxLoss || "0"}</span>
-                      </div>
-                      <div className="flex items-center text-sm">
-                        <Lock className="h-4 w-4 mr-2 text-blue-500" />
-                        <span className="text-muted-foreground">Profit Lock:</span>
-                        <span className="ml-auto font-medium">
-                          {portfolio.settings.profitLocking?.enabled ? "Enabled" : "Disabled"}
-                        </span>
-                      </div>
-                      <div className="flex items-center text-sm">
-                        <TrendingUp className="h-4 w-4 mr-2 text-green-500" />
-                        <span className="text-muted-foreground">Profit Trail:</span>
-                        <span className="ml-auto font-medium">
-                          {portfolio.settings.profitTrailing?.enabled ? "Enabled" : "Disabled"}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Assigned Users */}
-                  {portfolio.settings.assignedUsers &&
-                    portfolio.settings.assignedUsers.length > 0 &&
-                    expandedPortfolioId !== portfolio.id && (
-                      <div className="mb-4">
-                        <div className="flex items-center mb-2 text-sm">
-                          <Users className="h-4 w-4 mr-2 text-indigo-500" />
-                          <span className="font-medium">Assigned Users</span>
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-y-2 gap-x-4">
+                        <div className="flex items-center text-sm">
+                          <DollarSign className="h-4 w-4 mr-2 text-green-500" />
+                          <span className="text-muted-foreground">Max Profit:</span>
+                          <span className="ml-auto font-medium">₹{portfolio.settings.maxProfit || "0"}</span>
                         </div>
-                        <div className="flex flex-wrap gap-1">
-                          {portfolio.settings.assignedUsers.map((user, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {user.alias || user.name} (x{user.multiplier})
-                            </Badge>
-                          ))}
+                        <div className="flex items-center text-sm">
+                          <Shield className="h-4 w-4 mr-2 text-red-500" />
+                          <span className="text-muted-foreground">Max Loss:</span>
+                          <span className="ml-auto font-medium">₹{portfolio.settings.maxLoss || "0"}</span>
+                        </div>
+                        <div className="flex items-center text-sm">
+                          <Lock className="h-4 w-4 mr-2 text-blue-500" />
+                          <span className="text-muted-foreground">Profit Lock:</span>
+                          <span className="ml-auto font-medium">
+                            {portfolio.settings.profitLocking?.enabled ? "Enabled" : "Disabled"}
+                          </span>
+                        </div>
+                        <div className="flex items-center text-sm">
+                          <TrendingUp className="h-4 w-4 mr-2 text-green-500" />
+                          <span className="text-muted-foreground">Profit Trail:</span>
+                          <span className="ml-auto font-medium">
+                            {portfolio.settings.profitTrailing?.enabled ? "Enabled" : "Disabled"}
+                          </span>
                         </div>
                       </div>
-                    )}
 
-                  {/* Strategies Count */}
-                  {portfolio.strategiesCount > 0 && expandedPortfolioId !== portfolio.id && (
-                    <div className="mt-2">
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                        {portfolio.strategiesCount} {portfolio.strategiesCount === 1 ? "Strategy" : "Strategies"}
-                      </Badge>
+                      {/* Assigned Users - Always show this section */}
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center text-sm">
+                            <Users className="h-4 w-4 mr-2 text-indigo-500" />
+                            <span className="font-medium text-indigo-700 dark:text-indigo-300">
+                              Assigned Users ({portfolio.settings.assignedUsers?.length || 0})
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                            onClick={(e) => handleAssignUser(portfolio.id, e)}
+                          >
+                            {portfolio.settings.assignedUsers?.length > 0 ? "Edit" : "Assign"}
+                          </Button>
+                        </div>
+                        <div className="min-h-[24px] flex flex-wrap gap-1">
+                          {portfolio.settings.assignedUsers && portfolio.settings.assignedUsers.length > 0 ? (
+                            portfolio.settings.assignedUsers.map((user, index) => (
+                              <Badge
+                                key={index}
+                                variant="outline"
+                                className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800 font-medium"
+                              >
+                                {user.alias || user.name} (x{user.multiplier})
+                              </Badge>
+                            ))
+                          ) : (
+                            <div className="text-xs text-gray-500 italic bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded border border-dashed border-gray-300 dark:border-gray-600">
+                              No users assigned - Click "Assign" to add users
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Strategies */}
+                      {portfolio.strategies && portfolio.strategies.length > 0 && (
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center text-sm">
+                              <Settings className="h-4 w-4 mr-2 text-purple-500" />
+                              <span className="font-medium text-purple-700 dark:text-purple-300">
+                                Strategies ({portfolio.strategies.length})
+                              </span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-xs text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                              onClick={(e) => handleManageStrategies(portfolio.id, e)}
+                            >
+                              Manage
+                            </Button>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {portfolio.strategies.slice(0, 3).map((strategy, index) => (
+                              <Badge
+                                key={index}
+                                variant="outline"
+                                className={`text-xs cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/20 ${
+                                  strategy.enabled === false
+                                    ? "opacity-50 line-through bg-gray-100 text-gray-500 border-gray-300"
+                                    : "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800"
+                                }`}
+                                onClick={(e) => handleManageStrategies(portfolio.id, e)}
+                              >
+                                {strategy.name || `Strategy ${index + 1}`}
+                              </Badge>
+                            ))}
+                            {portfolio.strategies.length > 3 && (
+                              <Badge
+                                variant="outline"
+                                className="text-xs cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/20 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800"
+                                onClick={(e) => handleManageStrategies(portfolio.id, e)}
+                              >
+                                +{portfolio.strategies.length - 3} more
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {/* The strategies count is now integrated into the strategies section above */}
                     </div>
                   )}
                 </CardContent>
@@ -1141,6 +1270,82 @@ export default function PortfolioList() {
           })
         )}
       </div>
+
+      {/* Strategy Management Dialog */}
+      <Dialog open={showStrategyManageDialog} onOpenChange={setShowStrategyManageDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Manage Portfolio Strategies</DialogTitle>
+            <DialogDescription>
+              Enable or disable strategies in "{selectedPortfolioForStrategies?.name}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
+            <div className="space-y-3">
+              {portfolioStrategies.length === 0 ? (
+                <div className="text-center py-8">
+                  <Settings className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No Strategies Found</h3>
+                  <p className="text-muted-foreground">This portfolio doesn't have any strategies.</p>
+                </div>
+              ) : (
+                portfolioStrategies.map((strategy, index) => (
+                  <div
+                    key={strategy.id || index}
+                    className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
+                      strategy.enabled !== false
+                        ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
+                        : "bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-8 h-8 rounded-md ${
+                          strategy.enabled !== false
+                            ? "bg-gradient-to-r from-green-500 to-green-600"
+                            : "bg-gradient-to-r from-gray-400 to-gray-500"
+                        } flex items-center justify-center text-white font-semibold text-xs`}
+                      >
+                        {(strategy.name || `S${index + 1}`).substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-medium">{strategy.name || `Strategy ${index + 1}`}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          Max Profit: ₹{strategy.maxProfit || 0} • Max Loss: ₹{strategy.maxLoss || 0}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
+                        {strategy.enabled !== false ? (
+                          <Eye className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <EyeOff className="h-4 w-4 text-gray-400" />
+                        )}
+                        <Switch
+                          checked={strategy.enabled !== false}
+                          onCheckedChange={(checked) => handleStrategyToggle(strategy.id || index, checked)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          <DialogFooter className="p-6 pt-2">
+            <div className="flex justify-between w-full">
+              <Button variant="outline" onClick={() => setShowStrategyManageDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveStrategyChanges} className="bg-purple-600 hover:bg-purple-700">
+                Save Changes
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* User Assignment Dialog */}
       <Dialog open={showUserAssignDialog} onOpenChange={setShowUserAssignDialog}>
