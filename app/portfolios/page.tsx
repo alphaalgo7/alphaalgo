@@ -34,6 +34,7 @@ import {
   ArrowRightLeft,
   Play,
   Square,
+  AlertTriangle,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
@@ -77,6 +78,10 @@ export default function PortfolioList() {
   const [availableUsers, setAvailableUsers] = useState([])
   const [selectedUsers, setSelectedUsers] = useState([])
   const [editableSettings, setEditableSettings] = useState({})
+
+  const [showSquareOffDialog, setShowSquareOffDialog] = useState(false)
+  const [selectedPortfolioForSquareOff, setSelectedPortfolioForSquareOff] = useState(null)
+  const [squareOffPositions, setSquareOffPositions] = useState([])
 
   // Retry mechanism settings
   const [retrySettings, setRetrySettings] = useState({
@@ -222,7 +227,11 @@ export default function PortfolioList() {
         setPortfolios(loadedPortfolios)
       } catch (error) {
         console.error("Error loading portfolios:", error)
-        toast.error("Failed to load portfolios")
+        toast({
+          title: "Error",
+          description: "Failed to load portfolios",
+          variant: "destructive",
+        })
       } finally {
         setIsLoading(false)
       }
@@ -251,7 +260,11 @@ export default function PortfolioList() {
       setAvailableUsers(sampleUsers)
     } catch (error) {
       console.error("Error loading users:", error)
-      toast.error("Failed to load users")
+      toast({
+        title: "Error",
+        description: "Failed to load users",
+        variant: "destructive",
+      })
     }
   }
 
@@ -265,10 +278,17 @@ export default function PortfolioList() {
       // Update local state
       setPortfolios(portfolios.map((p) => (p.id === portfolioId ? { ...p, settings: newSettings } : p)))
 
-      toast.success("Portfolio settings saved successfully")
+      toast({
+        title: "Success",
+        description: "Portfolio settings saved successfully",
+      })
     } catch (error) {
       console.error("Error saving portfolio settings:", error)
-      toast.error("Failed to save portfolio settings")
+      toast({
+        title: "Error",
+        description: "Failed to save portfolio settings",
+        variant: "destructive",
+      })
     }
   }
 
@@ -284,23 +304,87 @@ export default function PortfolioList() {
         newSet.delete(id)
         return newSet
       })
-      toast.success("Portfolio deleted successfully")
+      toast({
+        title: "Success",
+        description: "Portfolio deleted successfully",
+      })
     } catch (error) {
       console.error("Error deleting portfolio:", error)
-      toast.error("Failed to delete portfolio")
+      toast({
+        title: "Error",
+        description: "Failed to delete portfolio",
+        variant: "destructive",
+      })
     }
   }
 
-  // Handle stop live for individual portfolio
+  // Handle stop live for individual portfolio with square off confirmation
   const handleStopLive = (portfolioId, e) => {
     e.stopPropagation()
-    setLivePortfolios((prev) => {
-      const newSet = new Set(prev)
-      newSet.delete(portfolioId)
-      return newSet
-    })
+
+    // Get portfolio details
     const portfolio = portfolios.find((p) => p.id === portfolioId)
-    toast.success(`${portfolio?.name} stopped from live trading`)
+
+    // Load associated positions for this portfolio (mock data for now)
+    const mockPositions = [
+      {
+        id: 1,
+        symbol: "NIFTY 24350 CE",
+        quantity: 50,
+        avgPrice: 125.5,
+        currentPrice: 142.3,
+        pnl: 840,
+        type: "BUY",
+      },
+      {
+        id: 2,
+        symbol: "BANKNIFTY 52000 PE",
+        quantity: 25,
+        avgPrice: 89.75,
+        currentPrice: 76.2,
+        pnl: -338.75,
+        type: "BUY",
+      },
+      {
+        id: 3,
+        symbol: "RELIANCE",
+        quantity: 10,
+        avgPrice: 2450.0,
+        currentPrice: 2478.5,
+        pnl: 285,
+        type: "BUY",
+      },
+    ]
+
+    setSelectedPortfolioForSquareOff(portfolio)
+    setSquareOffPositions(mockPositions)
+    setShowSquareOffDialog(true)
+  }
+
+  // Handle square off confirmation
+  const handleConfirmSquareOff = () => {
+    if (selectedPortfolioForSquareOff) {
+      // Remove from live portfolios
+      setLivePortfolios((prev) => {
+        const newSet = new Set(prev)
+        newSet.delete(selectedPortfolioForSquareOff.id)
+        return newSet
+      })
+
+      // Show success message
+      toast({
+        title: "Portfolio Stopped",
+        description: `${selectedPortfolioForSquareOff.name} stopped and all ${squareOffPositions.length} positions squared off successfully`,
+      })
+
+      // Close dialog and reset state
+      setShowSquareOffDialog(false)
+      setSelectedPortfolioForSquareOff(null)
+      setSquareOffPositions([])
+
+      // Here you would implement the actual square off logic
+      console.log("Squaring off positions for portfolio:", selectedPortfolioForSquareOff.id, squareOffPositions)
+    }
   }
 
   // Handle assign user
@@ -395,7 +479,11 @@ export default function PortfolioList() {
   // Handle go live execution
   const handleExecuteGoLive = () => {
     if (selectedPortfoliosForLive.length === 0) {
-      toast.error("Please select at least one portfolio to go live")
+      toast({
+        title: "Error",
+        description: "Please select at least one portfolio to go live",
+        variant: "destructive",
+      })
       return
     }
 
@@ -408,7 +496,10 @@ export default function PortfolioList() {
 
     const selectedPortfolioNames = portfolios.filter((p) => selectedPortfoliosForLive.includes(p.id)).map((p) => p.name)
 
-    toast.success(`${selectedPortfoliosForLive.length} portfolio(s) are now LIVE: ${selectedPortfolioNames.join(", ")}`)
+    toast({
+      title: "Success",
+      description: `${selectedPortfoliosForLive.length} portfolio(s) are now LIVE: ${selectedPortfolioNames.join(", ")}`,
+    })
     setShowGoLiveDialog(false)
     setSelectedPortfoliosForLive([])
 
@@ -547,7 +638,10 @@ export default function PortfolioList() {
   // Handle create new portfolio
   const handleCreateNew = () => {
     // Show toast immediately before navigation
-    toast.info("Select strategies to add to a new portfolio")
+    toast({
+      title: "Info",
+      description: "Select strategies to add to a new portfolio",
+    })
 
     // Use direct navigation without setTimeout
     window.location.href = "/strategies"
@@ -1557,18 +1651,27 @@ export default function PortfolioList() {
                             ? "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
                             : "bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
                         }`}
-                        onClick={() => handlePortfolioSelection(portfolio.id)}
                       >
                         <div className="flex items-center space-x-3 flex-1">
                           <div className="flex-shrink-0">
                             <Checkbox
                               checked={isSelected}
-                              onCheckedChange={() => handlePortfolioSelection(portfolio.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedPortfoliosForLive((prev) => [...prev, portfolio.id])
+                                } else {
+                                  setSelectedPortfoliosForLive((prev) => prev.filter((id) => id !== portfolio.id))
+                                }
+                              }}
                               className="h-4 w-4"
+                              onClick={(e) => e.stopPropagation()}
                             />
                           </div>
 
-                          <div className="flex-1 min-w-0">
+                          <div
+                            className="flex-1 min-w-0 cursor-pointer"
+                            onClick={() => handlePortfolioSelection(portfolio.id)}
+                          >
                             <div className="flex items-center justify-between">
                               <div>
                                 <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
@@ -1686,6 +1789,119 @@ export default function PortfolioList() {
                   <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></div>
                   Go Live ({selectedPortfoliosForLive.length})
                 </div>
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Square Off Confirmation Dialog */}
+      <Dialog open={showSquareOffDialog} onOpenChange={setShowSquareOffDialog}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center text-red-600">
+              <Square className="h-5 w-5 mr-2" />
+              Stop Portfolio & Square Off Positions
+            </DialogTitle>
+            <DialogDescription>
+              Stopping "{selectedPortfolioForSquareOff?.name}" will square off all associated positions. This action
+              cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
+            {squareOffPositions.length > 0 ? (
+              <div className="space-y-4">
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                  <div className="flex items-center mb-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 mr-2" />
+                    <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                      Warning: All positions will be squared off at market price
+                    </h4>
+                  </div>
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    This will immediately close all open positions associated with this portfolio.
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium mb-3 flex items-center">
+                    <TrendingUp className="h-4 w-4 mr-2 text-blue-500" />
+                    Positions to be Squared Off ({squareOffPositions.length})
+                  </h3>
+
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 dark:bg-gray-800 px-4 py-2 grid grid-cols-6 gap-4 text-xs font-medium text-gray-600 dark:text-gray-400">
+                      <div>Symbol</div>
+                      <div>Quantity</div>
+                      <div>Avg Price</div>
+                      <div>Current Price</div>
+                      <div>P&L</div>
+                      <div>Type</div>
+                    </div>
+
+                    <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {squareOffPositions.map((position) => (
+                        <div
+                          key={position.id}
+                          className="px-4 py-3 grid grid-cols-6 gap-4 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+                        >
+                          <div className="font-medium">{position.symbol}</div>
+                          <div>{position.quantity}</div>
+                          <div>₹{position.avgPrice.toFixed(2)}</div>
+                          <div>₹{position.currentPrice.toFixed(2)}</div>
+                          <div className={`font-medium ${position.pnl >= 0 ? "text-green-600" : "text-red-600"}`}>
+                            {position.pnl >= 0 ? "+" : ""}₹{position.pnl.toFixed(2)}
+                          </div>
+                          <div>
+                            <Badge variant={position.type === "BUY" ? "default" : "secondary"} className="text-xs">
+                              {position.type}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200">Total P&L Impact</h4>
+                      <p className="text-xs text-blue-600 dark:text-blue-400">
+                        Net profit/loss from squaring off all positions
+                      </p>
+                    </div>
+                    <div
+                      className={`text-lg font-bold ${squareOffPositions.reduce((sum, pos) => sum + pos.pnl, 0) >= 0 ? "text-green-600" : "text-red-600"}`}
+                    >
+                      {squareOffPositions.reduce((sum, pos) => sum + pos.pnl, 0) >= 0 ? "+" : ""}₹
+                      {squareOffPositions.reduce((sum, pos) => sum + pos.pnl, 0).toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Square className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Open Positions</h3>
+                <p className="text-gray-500">This portfolio has no open positions to square off.</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="p-6 pt-2">
+            <div className="flex justify-between w-full">
+              <Button variant="outline" onClick={() => setShowSquareOffDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmSquareOff}
+                className="bg-red-600 hover:bg-red-700 text-white"
+                disabled={squareOffPositions.length === 0}
+              >
+                <Square className="h-4 w-4 mr-2" />
+                Stop Portfolio & Square Off All Positions
               </Button>
             </div>
           </DialogFooter>

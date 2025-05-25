@@ -414,43 +414,49 @@ export default function UserSettingsPage() {
   const verifyAndProceed = () => {
     setIsVerifying(true)
 
-    // Simulate OTP verification
-    setTimeout(() => {
-      if (newUser.phoneOtp !== "1234") {
-        toast({
-          title: "OTP did not match. Please try again.",
-          description: "Please check the OTP sent to your phone",
-          variant: "destructive",
-        })
-        setIsVerifying(false)
-        return
-      }
+    // Add a console log for debugging
+    console.log("Verifying OTPs:", newUser.phoneOtp, newUser.emailOtp)
 
-      if (newUser.emailOtp !== "1234") {
-        toast({
-          title: "OTP did not match. Please try again.",
-          description: "Please check the OTP sent to your email",
-          variant: "destructive",
-        })
-        setIsVerifying(false)
-        return
-      }
-
-      // Both OTPs verified
-      setNewUser((prev) => ({
-        ...prev,
-        phoneVerified: true,
-        emailVerified: true,
-        username: prev.fullName, // Set username from full name
-      }))
-      setAddUserStep(2)
-      setIsVerifying(false)
-
+    // Simplified verification logic
+    if (newUser.phoneOtp !== "1234") {
       toast({
-        title: "Verification Successful",
-        description: "Phone and email verified successfully. Please complete broker details.",
+        title: "Phone OTP did not match",
+        description: "Please check the OTP sent to your phone. For testing, use '1234'.",
+        variant: "destructive",
       })
-    }, 1500)
+      setIsVerifying(false)
+      return
+    }
+
+    if (newUser.emailOtp !== "1234") {
+      toast({
+        title: "Email OTP did not match",
+        description: "Please check the OTP sent to your email. For testing, use '1234'.",
+        variant: "destructive",
+      })
+      setIsVerifying(false)
+      return
+    }
+
+    // Both OTPs verified - update state and move to next step
+    toast({
+      title: "Verification Successful",
+      description: "Phone and email verified successfully. Proceeding to broker details.",
+    })
+
+    // Update verification status
+    setNewUser((prev) => ({
+      ...prev,
+      phoneVerified: true,
+      emailVerified: true,
+    }))
+
+    // Move to step 2 immediately
+    setAddUserStep(2)
+    setIsVerifying(false)
+
+    // Add a console log to confirm step change
+    console.log("Moving to step 2")
   }
 
   const handleAddUser = () => {
@@ -1307,18 +1313,6 @@ export default function UserSettingsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="totpKey" className="text-sm font-medium">
-                    TOTP Key
-                  </label>
-                  <Input
-                    id="totpKey"
-                    placeholder="Enter TOTP key if applicable"
-                    value={newUser.totpKey}
-                    onChange={(e) => handleNewUserInputChange("totpKey", e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
                   <label htmlFor="apiKey" className="text-sm font-medium">
                     API Key <span className="text-red-500">*</span>
                   </label>
@@ -1342,19 +1336,6 @@ export default function UserSettingsPage() {
                     onChange={(e) => handleNewUserInputChange("apiSecret", e.target.value)}
                     required
                   />
-                </div>
-
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-amber-800">Security Notice</h4>
-                      <p className="text-sm text-amber-700 mt-1">
-                        Your broker and API credentials grant access to your trading account. Never share these
-                        credentials with anyone and ensure you're using a secure connection when entering them.
-                      </p>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
