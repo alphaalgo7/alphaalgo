@@ -48,8 +48,34 @@ export interface FormInputData {
 
 // New type for what generateStrategyRows returns and handleAddStrategies accepts
 export interface GeneratedStrategySet {
-  generatedRows: StrategyConfigRow[]
+  generatedRows: GeneratedStrategyRow[]
   sourcePseudoAcc: string // To get the first letter for de-duplication
+}
+
+export interface GeneratedStrategyRow {
+  id: string
+  planLetter: string
+  strategyType: string
+  pseudoAcc: string
+  tradingAcc: string
+  mainBasket: string
+  fiveLBasket: string
+  dayMaxProfit: string
+  dayMaxLoss: string
+  profitReaches: string
+  lockMinProfit: string
+  increaseProfitBy: string
+  trailProfitBy: string
+  selected?: boolean
+  stoxxoNumber?: string
+  instrument?: string
+}
+
+export interface StrategyTag {
+  id: string
+  name: string
+  color: string
+  strategies: string[]
 }
 
 export const initialStrategyDataRaw = `

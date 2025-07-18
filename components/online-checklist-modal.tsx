@@ -1,12 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { X, Download, Check, Square, CheckSquare, RotateCcw } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Checkbox } from "@/components/ui/checkbox"
+import { X, Download, Search, CheckCircle, FileSpreadsheet, Users, Target } from "lucide-react"
 import type { StrategyConfigRow } from "@/lib/types"
-import { toast } from "@/hooks/use-toast"
 
 interface OnlineChecklistModalProps {
   isOpen: boolean
@@ -24,19 +26,11 @@ interface OnlineChecklistModalProps {
   instrument: string
 }
 
-interface ChecklistItem {
+interface StrategyTag {
   id: string
-  type: "strategy" | "portfolio"
   name: string
-  parentTag?: string
-  checked: boolean
-  startTrading: boolean
-  portfolioEnabled: boolean
-  userAccount?: string
-  pseudoAcc?: string
-  maxProfit?: string
-  maxLoss?: string
-  profitLocking?: string
+  color: string
+  strategies: string[]
 }
 
 export default function OnlineChecklistModal({
@@ -47,374 +41,334 @@ export default function OnlineChecklistModal({
   stoxxoNumber,
   instrument,
 }: OnlineChecklistModalProps) {
-  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([])
-  const [activeTab, setActiveTab] = useState<"strategies" | "portfolio">("strategies")
+  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filterPlan, setFilterPlan] = useState<string>("all")
+  const [filterStrategy, setFilterStrategy] = useState<string>("all")
+  const [tags, setTags] = useState<StrategyTag[]>([
+    { id: "1", name: "High Priority", color: "bg-red-500", strategies: [] },
+    { id: "2", name: "Conservative", color: "bg-green-500", strategies: [] },
+    { id: "3", name: "Aggressive", color: "bg-orange-500", strategies: [] },
+  ])
 
-  useEffect(() => {
-    if (isOpen) {
-      // Initialize checklist items from strategy data
-      const strategyItems: ChecklistItem[] = strategyData.map((strategy, index) => ({
-        id: `strategy-${index}`,
-        type: "strategy",
-        name: strategy.StrategyTag,
-        checked: false,
-        startTrading: false,
-        portfolioEnabled: false,
-        userAccount: strategy["User Account"],
-        pseudoAcc: strategy["Pseudo Acc"],
-        maxProfit: strategy["Max Profit"],
-        maxLoss: strategy["Max Loss"],
-        profitLocking: strategy["Profit Locking"],
-      }))
+  const filteredConfigurations = useMemo(() => {
+    return strategyData.filter((config) => {
+      const matchesSearch =
+        searchTerm === "" ||
+        Object.values(config).some((value) => String(value).toLowerCase().includes(searchTerm.toLowerCase()))
+      const strategyTag = config.StrategyTag || ""
+      const planMatch = strategyTag.match(/PLAN([A-Z])/i)
+      const planLetter = planMatch ? planMatch[1] : ""
 
-      // Initialize portfolio items
-      const portfolioItems: ChecklistItem[] = selectedPortfolioEntries.map((entry, index) => ({
-        id: `portfolio-${index}`,
-        type: "portfolio",
-        name: entry.displayName,
-        parentTag: entry.parentTag,
-        checked: false,
-        startTrading: false,
-        portfolioEnabled: false,
-      }))
+      const matchesPlan = filterPlan === "all" || planLetter === filterPlan
+      const matchesStrategy = filterStrategy === "all" || strategyTag.includes(filterStrategy)
 
-      setChecklistItems([...strategyItems, ...portfolioItems])
-    }
-  }, [isOpen, strategyData, selectedPortfolioEntries])
-
-  if (!isOpen) return null
-
-  const strategyItems = checklistItems.filter((item) => item.type === "strategy")
-  const portfolioItems = checklistItems.filter((item) => item.type === "portfolio")
-
-  const updateItem = (id: string, field: keyof ChecklistItem, value: boolean) => {
-    setChecklistItems((items) => items.map((item) => (item.id === id ? { ...item, [field]: value } : item)))
-  }
-
-  const toggleAll = (field: keyof ChecklistItem, items: ChecklistItem[]) => {
-    const allChecked = items.every((item) => item[field] as boolean)
-    const newValue = !allChecked
-
-    setChecklistItems((prevItems) =>
-      prevItems.map((item) => (items.some((i) => i.id === item.id) ? { ...item, [field]: newValue } : item)),
-    )
-  }
-
-  const resetAll = () => {
-    setChecklistItems((items) =>
-      items.map((item) => ({
-        ...item,
-        checked: false,
-        startTrading: false,
-        portfolioEnabled: false,
-      })),
-    )
-    toast({
-      title: "Reset Complete",
-      description: "All checkboxes have been cleared.",
+      return matchesSearch && matchesPlan && matchesStrategy
     })
+  }, [strategyData, searchTerm, filterPlan, filterStrategy])
+
+  const uniquePlans = Array.from(
+    new Set(
+      strategyData
+        .map((c) => {
+          const strategyTag = c.StrategyTag || ""
+          const planMatch = strategyTag.match(/PLAN([A-Z])/i)
+          return planMatch ? planMatch[1] : ""
+        })
+        .filter(Boolean),
+    ),
+  ).sort()
+
+  const uniqueStrategies = Array.from(new Set(strategyData.map((c) => c.StrategyTag || "").filter(Boolean))).sort()
+
+  const handleItemCheck = (itemId: string) => {
+    const newChecked = new Set(checkedItems)
+    if (newChecked.has(itemId)) {
+      newChecked.delete(itemId)
+    } else {
+      newChecked.add(itemId)
+    }
+    setCheckedItems(newChecked)
   }
 
-  const getStats = (items: ChecklistItem[]) => {
-    const checked = items.filter((item) => item.checked).length
-    const startTrading = items.filter((item) => item.startTrading).length
-    const portfolioEnabled = items.filter((item) => item.portfolioEnabled).length
-    return { checked, startTrading, portfolioEnabled, total: items.length }
+  const handleBulkAction = (action: "check" | "uncheck") => {
+    if (action === "check") {
+      setCheckedItems(new Set(filteredConfigurations.map((c, index) => `strategy-${index}`)))
+    } else {
+      setCheckedItems(new Set())
+    }
   }
 
-  const handleDownloadModified = () => {
-    // Create CSV content with checkbox states
-    const headers = [
-      "CHECKLIST",
-      "START TRADING",
-      "PORTFOLIO ENABLED",
-      "Name",
-      "Parent Tag",
-      "User Account",
-      "Pseudo Acc",
-      "Max Profit",
-      "Max Loss",
-      "Profit Locking",
+  const addTag = (strategyId: string, tagId: string) => {
+    setTags(
+      tags.map((tag) =>
+        tag.id === tagId
+          ? { ...tag, strategies: [...tag.strategies.filter((id) => id !== strategyId), strategyId] }
+          : { ...tag, strategies: tag.strategies.filter((id) => id !== strategyId) },
+      ),
+    )
+  }
+
+  const downloadChecklist = () => {
+    const csvData = [
+      ["Checked", "Plan", "Strategy Tag", "User Account", "Max Profit", "Max Loss", "Profit Locking", "Tags"],
+      ...filteredConfigurations.map((config, index) => [
+        checkedItems.has(`strategy-${index}`) ? "✓" : "○",
+        config.StrategyTag?.match(/PLAN([A-Z])/i)?.[1] || "",
+        config.StrategyTag || "",
+        config["User Account"] || "",
+        config["Max Profit"] || "",
+        config["Max Loss"] || "",
+        config["Profit Locking"] || "",
+        tags
+          .filter((tag) => tag.strategies.includes(`strategy-${index}`))
+          .map((tag) => tag.name)
+          .join("; "),
+      ]),
     ]
 
-    const csvRows = checklistItems.map((item) => [
-      item.checked ? "☑" : "☐",
-      item.startTrading ? "YES" : "NO",
-      item.portfolioEnabled ? "YES" : "NO",
-      item.name,
-      item.parentTag || "",
-      item.userAccount || "",
-      item.pseudoAcc || "",
-      item.maxProfit || "",
-      item.maxLoss || "",
-      item.profitLocking || "",
-    ])
-
-    const csvContent = [headers.join(","), ...csvRows.map((row) => row.join(","))].join("\n")
-
-    // Generate filename
-    const now = new Date()
-    const dateStr = now.toISOString().split("T")[0]
-    const timeStr = now.toTimeString().split(" ")[0].replace(/:/g, "")
-
-    const filenameParts = []
-    if (stoxxoNumber) filenameParts.push(`STOXXO${stoxxoNumber}`)
-    if (instrument)
-      filenameParts.push(
-        instrument
-          .replace(/\s+/g, "_")
-          .replace(/[^A-Za-z0-9_-]/g, "")
-          .toUpperCase(),
-      )
-    filenameParts.push("MODIFIED_CHECKLIST")
-    filenameParts.push(`${dateStr}_${timeStr}`)
-
-    const filename = filenameParts.join("_")
-
-    // Create and download the file
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-    const link = document.createElement("a")
+    const csvContent = csvData.map((row) => row.join(",")).join("\n")
+    const blob = new Blob([csvContent], { type: "text/csv" })
     const url = URL.createObjectURL(blob)
-
-    link.setAttribute("href", url)
-    link.setAttribute("download", `${filename}.csv`)
-    link.style.visibility = "hidden"
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-
-    toast({
-      title: "Modified Checklist Downloaded",
-      description: `File saved as ${filename}.csv with current checkbox selections`,
-    })
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `strategy-checklist-${new Date().toISOString().split("T")[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
-  const currentItems = activeTab === "strategies" ? strategyItems : portfolioItems
-  const stats = getStats(currentItems)
+  const checkedCount = checkedItems.size
+  const totalCount = filteredConfigurations.length
+  const completionPercentage = totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0
+
+  if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-7xl max-h-[95vh] overflow-hidden">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-xl font-semibold">Online Checklist</CardTitle>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
+        <CardHeader className="border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="h-6 w-6 text-green-600" />
+              <CardTitle className="text-xl font-semibold text-slate-800 dark:text-slate-100">
+                Interactive Strategy Checklist
+              </CardTitle>
+              <Badge variant="secondary" className="text-xs">
+                {checkedCount}/{totalCount} completed ({completionPercentage}%)
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={downloadChecklist}>
+                <Download className="h-4 w-4 mr-1" />
+                Download CSV
+              </Button>
+              <Button variant="ghost" size="sm" onClick={onClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Header Info */}
-          <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-slate-800 dark:text-slate-200">
-                  {stoxxoNumber && `STOXXO ${stoxxoNumber}`}
-                  {stoxxoNumber && instrument && " - "}
-                  {instrument}
-                </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Interactive checklist with real-time updates
-                </p>
+
+        <CardContent className="p-0 overflow-y-auto max-h-[calc(95vh-120px)]">
+          <Tabs defaultValue="checklist" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="checklist">Strategy Checklist</TabsTrigger>
+              <TabsTrigger value="portfolio">Multi-Leg Portfolio</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="checklist" className="p-6">
+              {/* Filters and Controls */}
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
+                <div className="flex flex-col sm:flex-row gap-3 flex-1">
+                  <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                    <Input
+                      placeholder="Search strategies..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 text-sm"
+                    />
+                  </div>
+                  <select
+                    value={filterPlan}
+                    onChange={(e) => setFilterPlan(e.target.value)}
+                    className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800"
+                  >
+                    <option value="all">All Plans</option>
+                    {uniquePlans.map((plan) => (
+                      <option key={plan} value={plan}>
+                        Plan {plan}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={filterStrategy}
+                    onChange={(e) => setFilterStrategy(e.target.value)}
+                    className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800"
+                  >
+                    <option value="all">All Strategies</option>
+                    {uniqueStrategies.map((strategy) => (
+                      <option key={strategy} value={strategy}>
+                        {strategy}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => handleBulkAction("check")}>
+                    Check All
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => handleBulkAction("uncheck")}>
+                    Uncheck All
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={resetAll}>
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                  Reset All
-                </Button>
-                <Button
-                  onClick={handleDownloadModified}
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download Modified
-                </Button>
+
+              {/* Progress Bar */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Completion Progress</span>
+                  <span className="text-sm text-slate-600 dark:text-slate-400">
+                    {checkedCount} of {totalCount} strategies
+                  </span>
+                </div>
+                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                  <div
+                    className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${completionPercentage}%` }}
+                  />
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Tabs */}
-          <div className="flex space-x-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
-            <button
-              onClick={() => setActiveTab("strategies")}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                activeTab === "strategies"
-                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
-              }`}
-            >
-              Strategy Tags ({strategyItems.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("portfolio")}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                activeTab === "portfolio"
-                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
-              }`}
-            >
-              Multi Leg Portfolio ({portfolioItems.length})
-            </button>
-          </div>
+              {/* Strategy List */}
+              <div className="space-y-3">
+                {filteredConfigurations.map((config, index) => {
+                  const itemId = `strategy-${index}`
+                  const isChecked = checkedItems.has(itemId)
+                  const planLetter = config.StrategyTag?.match(/PLAN([A-Z])/i)?.[1] || ""
 
-          {/* Stats */}
-          <div className="grid grid-cols-4 gap-4">
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.checked}</div>
-              <div className="text-sm text-blue-600 dark:text-blue-400">Checked</div>
-            </div>
-            <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.startTrading}</div>
-              <div className="text-sm text-green-600 dark:text-green-400">Start Trading</div>
-            </div>
-            <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.portfolioEnabled}</div>
-              <div className="text-sm text-purple-600 dark:text-purple-400">Portfolio Enabled</div>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
-              <div className="text-2xl font-bold text-slate-600 dark:text-slate-400">{stats.total}</div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">Total Items</div>
-            </div>
-          </div>
+                  return (
+                    <div
+                      key={itemId}
+                      className={`border rounded-lg p-4 transition-all ${
+                        isChecked
+                          ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+                          : "border-slate-200 dark:border-slate-700 hover:border-slate-300"
+                      }`}
+                    >
+                      <div className="flex items-start gap-4">
+                        <Checkbox
+                          checked={isChecked}
+                          onCheckedChange={() => handleItemCheck(itemId)}
+                          className="mt-1"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant="outline" className="text-xs">
+                              Plan {planLetter}
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              {config.StrategyTag}
+                            </Badge>
+                            {isChecked && (
+                              <Badge variant="default" className="text-xs bg-green-600">
+                                Completed
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div>
+                              <span className="text-slate-600 dark:text-slate-400">User Account:</span>
+                              <div className="font-medium text-slate-800 dark:text-slate-200">
+                                {config["User Account"] || "N/A"}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-slate-600 dark:text-slate-400">Max Profit:</span>
+                              <div className="font-medium text-slate-800 dark:text-slate-200">
+                                {config["Max Profit"] || "N/A"}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-slate-600 dark:text-slate-400">Max Loss:</span>
+                              <div className="font-medium text-slate-800 dark:text-slate-200">
+                                {config["Max Loss"] || "N/A"}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-slate-600 dark:text-slate-400">Profit Locking:</span>
+                              <div className="font-medium text-slate-800 dark:text-slate-200">
+                                {config["Profit Locking"] || "N/A"}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
 
-          {/* Bulk Actions */}
-          <div className="flex gap-2 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => toggleAll("checked", currentItems)}
-              className="text-blue-600 border-blue-200 hover:bg-blue-50"
-            >
-              <CheckSquare className="h-4 w-4 mr-2" />
-              Toggle All Checked
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => toggleAll("startTrading", currentItems)}
-              className="text-green-600 border-green-200 hover:bg-green-50"
-            >
-              <Check className="h-4 w-4 mr-2" />
-              Toggle All Start Trading
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => toggleAll("portfolioEnabled", currentItems)}
-              className="text-purple-600 border-purple-200 hover:bg-purple-50"
-            >
-              <Square className="h-4 w-4 mr-2" />
-              Toggle All Portfolio
-            </Button>
-          </div>
+              {filteredConfigurations.length === 0 && (
+                <div className="text-center py-12">
+                  <FileSpreadsheet className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200 mb-2">No strategies found</h3>
+                  <p className="text-slate-600 dark:text-slate-400">Try adjusting your search or filter criteria.</p>
+                </div>
+              )}
+            </TabsContent>
 
-          {/* Checklist Table */}
-          <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
-            <div className="overflow-x-auto max-h-96">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 dark:bg-slate-800 sticky top-0">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium text-slate-700 dark:text-slate-300">Checklist</th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-700 dark:text-slate-300">
-                      Start Trading
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-700 dark:text-slate-300">
-                      Portfolio Enabled
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-700 dark:text-slate-300">Name</th>
-                    {activeTab === "strategies" && (
-                      <>
-                        <th className="px-4 py-3 text-left font-medium text-slate-700 dark:text-slate-300">
-                          User Account
-                        </th>
-                        <th className="px-4 py-3 text-left font-medium text-slate-700 dark:text-slate-300">
-                          Pseudo Acc
-                        </th>
-                        <th className="px-4 py-3 text-left font-medium text-slate-700 dark:text-slate-300">
-                          Max Profit
-                        </th>
-                        <th className="px-4 py-3 text-left font-medium text-slate-700 dark:text-slate-300">Max Loss</th>
-                      </>
-                    )}
-                    {activeTab === "portfolio" && (
-                      <th className="px-4 py-3 text-left font-medium text-slate-700 dark:text-slate-300">Parent Tag</th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                  {currentItems.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => updateItem(item.id, "checked", !item.checked)}
-                          className="text-blue-600 hover:text-blue-700"
-                        >
-                          {item.checked ? <CheckSquare className="h-5 w-5" /> : <Square className="h-5 w-5" />}
-                        </button>
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => updateItem(item.id, "startTrading", !item.startTrading)}
-                          className={`px-3 py-1 rounded text-xs font-medium ${
-                            item.startTrading
-                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                              : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400"
-                          }`}
-                        >
-                          {item.startTrading ? "YES" : "NO"}
-                        </button>
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => updateItem(item.id, "portfolioEnabled", !item.portfolioEnabled)}
-                          className={`px-3 py-1 rounded text-xs font-medium ${
-                            item.portfolioEnabled
-                              ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
-                              : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400"
-                          }`}
-                        >
-                          {item.portfolioEnabled ? "YES" : "NO"}
-                        </button>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge
-                          variant="secondary"
-                          className={
-                            item.name.includes("PLANA")
-                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                              : item.name.includes("PLANB")
-                                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                                : item.name.includes("PLANC")
-                                  ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
-                                  : "bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200"
-                          }
-                        >
-                          {item.name}
-                        </Badge>
-                      </td>
-                      {activeTab === "strategies" && (
-                        <>
-                          <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{item.userAccount || "-"}</td>
-                          <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{item.pseudoAcc || "-"}</td>
-                          <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{item.maxProfit || "-"}</td>
-                          <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{item.maxLoss || "-"}</td>
-                        </>
-                      )}
-                      {activeTab === "portfolio" && (
-                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{item.parentTag || "-"}</td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+            <TabsContent value="portfolio" className="p-6">
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <Users className="h-6 w-6 text-purple-600" />
+                  <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+                    Multi-Leg Portfolio Entries
+                  </h3>
+                  <Badge variant="secondary" className="text-xs">
+                    {selectedPortfolioEntries.length} entries
+                  </Badge>
+                </div>
 
-          {/* Footer */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button variant="outline" onClick={onClose}>
-              Close
-            </Button>
-          </div>
+                {selectedPortfolioEntries.length > 0 ? (
+                  <div className="space-y-4">
+                    {selectedPortfolioEntries.map((entry) => (
+                      <div
+                        key={entry.id}
+                        className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:border-slate-300 dark:hover:border-slate-600 transition-colors"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {entry.type}
+                            </Badge>
+                            <span className="font-medium text-slate-800 dark:text-slate-200">{entry.displayName}</span>
+                          </div>
+                          <Badge variant={entry.isCopied ? "default" : "secondary"} className="text-xs">
+                            {entry.isCopied ? "Copied" : "Original"}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-slate-600 dark:text-slate-400">Parent Tag: {entry.parentTag}</div>
+                        {entry.subType && (
+                          <div className="text-sm text-slate-600 dark:text-slate-400">Sub Type: {entry.subType}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Target className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200 mb-2">
+                      No portfolio entries selected
+                    </h3>
+                    <p className="text-slate-600 dark:text-slate-400">
+                      Use the Multi Leg Portfolio modal to select entries for your checklist.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>

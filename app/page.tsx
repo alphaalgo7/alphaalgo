@@ -1,29 +1,22 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
-import AuthModal from "@/components/auth-modal"
-import LandingPage from "@/components/landing-page"
-import StrategyWorkspace from "@/components/strategy-workspace"
+import StrategyConfigTable from "@/components/strategy-config-table"
+import StrategyInputForm from "@/components/strategy-input-form"
+import MultiLegPortfolioModal from "@/components/multi-leg-portfolio-modal"
+import OnlineChecklistModal from "@/components/online-checklist-modal"
+import { Button } from "@/components/ui/button"
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card"
+import { Download, RotateCcw, Undo2, Redo2, Settings2, TableIcon, Layers, Save, FileSpreadsheet } from "lucide-react"
 import { type StrategyConfigRow, initialStrategyDataRaw, type GeneratedStrategySet } from "@/lib/types"
 import { parseRawStrategyData, convertToCSV } from "@/lib/utils"
 import { Toaster } from "@/components/ui/toaster"
 import { toast } from "@/hooks/use-toast"
+import SaveConfigurationsModal from "@/components/save-configurations-modal"
 
 const MAX_HISTORY_LENGTH = 50
 
-interface UserData {
-  id: string
-  name: string
-  email: string
-  avatar?: string
-  createdAt: string
-  lastLogin: string
-}
-
 export default function HomePage() {
-  const [user, setUser] = useState<UserData | null>(null)
-  const [showAuthModal, setShowAuthModal] = useState(false)
-  const [showDashboard, setShowDashboard] = useState(false)
   const [strategyHeaders, setStrategyHeaders] = useState<string[]>([])
   const [history, setHistory] = useState<StrategyConfigRow[][]>([])
   const [currentHistoryIndex, setCurrentHistoryIndex] = useState<number>(-1)
@@ -42,7 +35,6 @@ export default function HomePage() {
       isCopied: boolean
     }>
   >([])
-  const [isLoading, setIsLoading] = useState(true)
 
   const currentStrategyData = useMemo(() => {
     if (currentHistoryIndex >= 0 && currentHistoryIndex < history.length) {
@@ -72,132 +64,13 @@ export default function HomePage() {
   )
 
   useEffect(() => {
-    const initializeApp = async () => {
-      try {
-        // Check for existing user session
-        const savedUser = localStorage.getItem("stoxxo_user")
-        if (savedUser) {
-          const userData = JSON.parse(savedUser)
-          setUser(userData)
-
-          // Verify session with server in background (optional)
-          try {
-            await verifyUserSession(userData.id)
-          } catch (error) {
-            console.error("Session verification failed:", error)
-            // Don't logout on verification failure, just log the error
-          }
-        }
-
-        // Initialize strategy headers
-        const { headers } = parseRawStrategyData(initialStrategyDataRaw)
-        setStrategyHeaders(headers)
-        setHistory([[]])
-        setCurrentHistoryIndex(0)
-      } catch (error) {
-        console.error("App initialization failed:", error)
-      } finally {
-        // Always set loading to false, regardless of success or failure
-        setIsLoading(false)
-      }
-    }
-
-    initializeApp()
+    // Only parse headers from initial data, but start with empty table
+    const { headers } = parseRawStrategyData(initialStrategyDataRaw)
+    setStrategyHeaders(headers)
+    // Start with empty history - no initial data loaded
+    setHistory([[]])
+    setCurrentHistoryIndex(0)
   }, [])
-
-  const checkUserSession = async () => {
-    try {
-      // Check localStorage first for quick load
-      const savedUser = localStorage.getItem("stoxxo_user")
-      if (savedUser) {
-        const userData = JSON.parse(savedUser)
-        setUser(userData)
-
-        // Verify session with server in background
-        await verifyUserSession(userData.id)
-      }
-    } catch (error) {
-      console.error("Session check failed:", error)
-      localStorage.removeItem("stoxxo_user")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const verifyUserSession = async (userId: string) => {
-    try {
-      const response = await fetch(`/api/auth/verify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Session expired")
-      }
-
-      const userData = await response.json()
-      setUser(userData)
-      localStorage.setItem("stoxxo_user", JSON.stringify(userData))
-    } catch (error) {
-      console.error("Session verification failed:", error)
-      // Don't clear user data on verification failure since API might not be available
-      // Just log the error and continue with cached user data
-    }
-  }
-
-  const handleLogin = async (userData: UserData) => {
-    try {
-      // In a real app, this would authenticate with your backend
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(userData),
-      })
-
-      if (!response.ok) {
-        throw new Error("Login failed")
-      }
-
-      const authenticatedUser = await response.json()
-      setUser(authenticatedUser)
-      localStorage.setItem("stoxxo_user", JSON.stringify(authenticatedUser))
-      setShowAuthModal(false)
-
-      toast({
-        title: "Welcome back!",
-        description: `Successfully signed in as ${authenticatedUser.name}`,
-      })
-    } catch (error) {
-      console.error("Login error:", error)
-      toast({
-        title: "Login Failed",
-        description: "Please try again or contact support.",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleLogout = async () => {
-    try {
-      if (user) {
-        await fetch("/api/auth/logout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: user.id }),
-        })
-      }
-    } catch (error) {
-      console.error("Logout error:", error)
-    } finally {
-      setUser(null)
-      localStorage.removeItem("stoxxo_user")
-      toast({
-        title: "Signed out",
-        description: "You have been successfully signed out.",
-      })
-    }
-  }
 
   const handleAddStrategies = useCallback(
     (newStrategySets: GeneratedStrategySet[]) => {
@@ -648,32 +521,145 @@ export default function HomePage() {
   const canRedo = useMemo(() => currentHistoryIndex < history.length - 1, [currentHistoryIndex, history.length])
   const canClear = useMemo(() => currentStrategyData.length > 0, [currentStrategyData])
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mx-auto mb-4"></div>
-          <p className="text-slate-600 dark:text-slate-400">Loading STOXXO...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Show landing page if user is not authenticated
-  if (!user) {
-    return (
-      <>
-        <LandingPage onSignIn={() => setShowAuthModal(true)} />
-        <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} onLogin={handleLogin} />
-        <Toaster />
-      </>
-    )
-  }
-
-  // Show workspace if user is authenticated
   return (
     <>
-      <StrategyWorkspace user={user} onLogout={handleLogout} />
+      <div className="min-h-screen bg-slate-100 dark:bg-slate-950 py-6 sm:py-8">
+        <main className="container mx-auto px-4">
+          <header className="mb-8">
+            <div className="flex items-center space-x-3 mb-2">
+              <Settings2 className="h-8 w-8 text-sky-600 dark:text-sky-500" />
+              <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Strategy Configuration Manager</h1>
+            </div>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Manage trading strategy configurations by pasting bulk data or adding individual entries.
+            </p>
+          </header>
+
+          <StrategyInputForm
+            onAddStrategies={handleAddStrategies}
+            onStoxxoNumberChange={handleStoxxoNumberChange}
+            onInstrumentChange={handleInstrumentChange}
+            stoxxoNumber={stoxxoNumber}
+            instrument={instrument}
+          />
+
+          <Card className="mt-10 shadow-lg">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex items-center space-x-3">
+                  <TableIcon className="h-6 w-6 text-sky-600 dark:text-sky-500" />
+                  <div>
+                    <CardTitle className="text-xl font-semibold text-slate-800 dark:text-slate-200">
+                      Current Configurations
+                    </CardTitle>
+                    <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+                      View and manage your strategy settings.
+                      {(stoxxoNumber || instrument) && (
+                        <span className="ml-2 font-medium text-sky-600 dark:text-sky-400">
+                          {stoxxoNumber && `STOXXO #${stoxxoNumber}`}
+                          {stoxxoNumber && instrument && " • "}
+                          {instrument && instrument}
+                        </span>
+                      )}
+                    </CardDescription>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2 flex-wrap">
+                  <Button onClick={handleUndo} variant="outline" size="sm" disabled={!canUndo} aria-label="Undo">
+                    <Undo2 className="h-4 w-4" />
+                  </Button>
+                  <Button onClick={handleRedo} variant="outline" size="sm" disabled={!canRedo} aria-label="Redo">
+                    <Redo2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    onClick={() => setIsPortfolioModalOpen(true)}
+                    variant="outline"
+                    size="sm"
+                    disabled={currentStrategyData.length === 0}
+                    className="bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/30 border-purple-200 dark:border-purple-800"
+                  >
+                    <Layers className="mr-1.5 h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    Multi Leg Portfolio
+                  </Button>
+                  <Button
+                    onClick={() => setIsSaveModalOpen(true)}
+                    variant="outline"
+                    size="sm"
+                    disabled={currentStrategyData.length === 0}
+                    className="bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 border-green-200 dark:border-green-800"
+                  >
+                    <Save className="mr-1.5 h-4 w-4 text-green-600 dark:text-green-400" />
+                    Save
+                  </Button>
+                  <Button onClick={handleClearAllData} variant="destructive" size="sm" disabled={!canClear}>
+                    <RotateCcw className="mr-1.5 h-4 w-4" />
+                    Clear All
+                  </Button>
+                  <Button
+                    onClick={handleDownloadCSV}
+                    variant="default"
+                    size="sm"
+                    disabled={currentStrategyData.length === 0}
+                    className="bg-sky-600 hover:bg-sky-700 dark:bg-sky-500 dark:hover:bg-sky-600 text-white"
+                  >
+                    <Download className="mr-1.5 h-4 w-4" />
+                    Download CSV
+                  </Button>
+                  <Button
+                    onClick={() => setIsOnlineChecklistOpen(true)}
+                    variant="outline"
+                    size="sm"
+                    disabled={currentStrategyData.length === 0}
+                    className="bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 border-orange-200 dark:border-orange-800"
+                  >
+                    <FileSpreadsheet className="mr-1.5 h-4 w-4 text-orange-600 dark:text-orange-400" />
+                    Online Checklist
+                  </Button>
+                  <Button
+                    onClick={handleDownloadChecklistCSV}
+                    variant="outline"
+                    size="sm"
+                    disabled={currentStrategyData.length === 0}
+                    className="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800"
+                  >
+                    <Download className="mr-1.5 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    Checklist CSV
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <StrategyConfigTable headers={memoizedHeaders} dataRows={currentStrategyData} />
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+
+      <MultiLegPortfolioModal
+        isOpen={isPortfolioModalOpen}
+        onClose={() => setIsPortfolioModalOpen(false)}
+        strategyData={currentStrategyData}
+        onSelectionChange={handlePortfolioSelectionChange}
+      />
+
+      <SaveConfigurationsModal
+        isOpen={isSaveModalOpen}
+        onClose={() => setIsSaveModalOpen(false)}
+        currentStrategyData={currentStrategyData}
+        strategyHeaders={memoizedHeaders}
+        stoxxoNumber={stoxxoNumber}
+        instrument={instrument}
+      />
+
+      <OnlineChecklistModal
+        isOpen={isOnlineChecklistOpen}
+        onClose={() => setIsOnlineChecklistOpen(false)}
+        strategyData={currentStrategyData}
+        selectedPortfolioEntries={selectedPortfolioEntries}
+        stoxxoNumber={stoxxoNumber}
+        instrument={instrument}
+      />
+
       <Toaster />
     </>
   )

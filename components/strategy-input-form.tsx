@@ -1,7 +1,6 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
-
 import type React from "react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -9,7 +8,19 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
-import { AlertCircle, ClipboardPaste, Plus, X, Sparkles, Grid3X3, Save } from "lucide-react"
+import {
+  AlertCircle,
+  ClipboardPaste,
+  Plus,
+  X,
+  Sparkles,
+  Grid3X3,
+  Save,
+  Edit3,
+  Trash2,
+  Check,
+  Settings,
+} from "lucide-react"
 import type { FormInputData, GeneratedStrategySet } from "@/lib/types"
 import { generateStrategyRows } from "@/lib/utils"
 import { toast } from "@/hooks/use-toast"
@@ -69,18 +80,18 @@ export default function StrategyInputForm({
   const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null)
   const [showManualEntryModal, setShowManualEntryModal] = useState(false)
 
-  // Dynamic dropdown options state
+  // Enhanced dropdown options state with more comprehensive data
   const [dropdownOptions, setDropdownOptions] = useState({
-    pseudoAcc: ["PSEUDO001", "PSEUDO002", "PSEUDO003", "PSEUDO004", "PSEUDO005"],
-    tradingAcc: ["TRADE001", "TRADE002", "TRADE003", "TRADE004", "TRADE005"],
-    mainBasket: ["10000", "25000", "50000", "100000", "200000"],
-    fiveLBasket: ["550000", "500000", "600000", "750000", "1000000"],
-    dayMaxProfit: ["1000", "2000", "5000", "10000", "15000", "20000"],
-    dayMaxLoss: ["500", "1000", "2000", "5000", "10000"],
-    profitReaches: ["500", "1000", "1500", "2000", "3000"],
-    lockMinProfit: ["200", "300", "500", "750", "1000"],
-    increaseProfitBy: ["100", "200", "300", "500", "750"],
-    trailProfitBy: ["50", "100", "150", "200", "250"],
+    pseudoAcc: ["PSEUDO001", "PSEUDO002", "PSEUDO003", "PSEUDO004", "PSEUDO005", "ALPHA001", "BETA002", "GAMMA003"],
+    tradingAcc: ["TRADE001", "TRADE002", "TRADE003", "TRADE004", "TRADE005", "ACC_MAIN", "ACC_BACKUP", "ACC_TEST"],
+    mainBasket: ["10000", "25000", "50000", "75000", "100000", "150000", "200000", "250000", "300000", "500000"],
+    fiveLBasket: ["550000", "500000", "600000", "750000", "1000000", "1250000", "1500000", "2000000"],
+    dayMaxProfit: ["1000", "2000", "3000", "5000", "7500", "10000", "15000", "20000", "25000", "30000"],
+    dayMaxLoss: ["500", "1000", "1500", "2000", "3000", "5000", "7500", "10000", "15000"],
+    profitReaches: ["500", "750", "1000", "1250", "1500", "2000", "2500", "3000", "4000", "5000"],
+    lockMinProfit: ["200", "300", "400", "500", "750", "1000", "1250", "1500", "2000"],
+    increaseProfitBy: ["100", "150", "200", "250", "300", "400", "500", "750", "1000"],
+    trailProfitBy: ["50", "75", "100", "125", "150", "200", "250", "300", "400", "500"],
   })
 
   const [editingDropdown, setEditingDropdown] = useState<{
@@ -90,6 +101,11 @@ export default function StrategyInputForm({
     field: null,
     newValue: "",
   })
+
+  const [editingCell, setEditingCell] = useState<{
+    rowIndex: number
+    field: keyof FormInputData
+  } | null>(null)
 
   const handlePasteChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setPastedData(e.target.value)
@@ -185,6 +201,33 @@ export default function StrategyInputForm({
         selected: "bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700",
         unselected: "border-2 border-rose-200 hover:border-rose-400 hover:bg-rose-50 text-rose-600 hover:text-rose-700",
       },
+      S1BUYING: {
+        selected: "bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700",
+        unselected:
+          "border-2 border-orange-200 hover:border-orange-400 hover:bg-orange-50 text-orange-600 hover:text-orange-700",
+      },
+      S2BUYING: {
+        selected: "bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700",
+        unselected: "border-2 border-red-200 hover:border-red-400 hover:bg-red-50 text-red-600 hover:text-red-700",
+      },
+      S3BUYING: {
+        selected: "bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700",
+        unselected: "border-2 border-pink-200 hover:border-pink-400 hover:bg-pink-50 text-pink-600 hover:text-pink-700",
+      },
+      N1BUYING: {
+        selected: "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700",
+        unselected:
+          "border-2 border-green-200 hover:border-green-400 hover:bg-green-50 text-green-600 hover:text-green-700",
+      },
+      N2BUYING: {
+        selected: "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700",
+        unselected:
+          "border-2 border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700",
+      },
+      N3BUYING: {
+        selected: "bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700",
+        unselected: "border-2 border-teal-200 hover:border-teal-400 hover:bg-teal-50 text-teal-600 hover:text-teal-700",
+      },
     }
 
     // Default color for custom instruments
@@ -219,6 +262,21 @@ export default function StrategyInputForm({
     const newData = tableData.filter((_, i) => i !== index)
     setTableData(newData)
     setEditingRowIndex(null)
+    toast({
+      title: "Entry Deleted",
+      description: "The entry has been removed successfully.",
+    })
+  }
+
+  const duplicateRow = (index: number) => {
+    const rowToDuplicate = { ...tableData[index] }
+    const newData = [...tableData]
+    newData.splice(index + 1, 0, rowToDuplicate)
+    setTableData(newData)
+    toast({
+      title: "Entry Duplicated",
+      description: "The entry has been duplicated successfully.",
+    })
   }
 
   const updateRowData = (index: number, field: keyof FormInputData, value: string) => {
@@ -229,6 +287,10 @@ export default function StrategyInputForm({
 
   const saveRow = (index: number) => {
     setEditingRowIndex(null)
+    toast({
+      title: "Entry Saved",
+      description: "Changes have been saved successfully.",
+    })
   }
 
   const editRow = (index: number) => {
@@ -391,35 +453,62 @@ export default function StrategyInputForm({
     setPastedData("")
   }
 
-  const renderDropdownWithEdit = (
+  const renderAdvancedDropdownWithEdit = (
     field: keyof typeof dropdownOptions,
     value: string,
     onChange: (value: string) => void,
-    placeholder: string,
+    rowIndex: number,
   ) => {
+    const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.field === field
+
+    if (isEditing) {
+      return (
+        <div className="relative group">
+          <select
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full h-12 text-sm border-2 border-blue-400 rounded-lg px-4 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 pr-12 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-md"
+            autoFocus
+          >
+            <option value="">Select {field}...</option>
+            {dropdownOptions[field].map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+          <div className="absolute right-1 top-1 flex gap-1">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-10 w-10 p-0 hover:bg-green-100 dark:hover:bg-green-900 text-green-600"
+              onClick={() => setEditingCell(null)}
+            >
+              <Check className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-10 w-10 p-0 hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-600"
+              onClick={() => setEditingDropdown({ field, newValue: "" })}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )
+    }
+
     return (
-      <div className="relative group">
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full h-12 text-sm border border-slate-200 dark:border-slate-700 rounded-lg px-4 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 pr-12 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all"
-        >
-          <option value="">-</option>
-          {dropdownOptions[field].map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          className="absolute right-1 top-1 h-10 w-10 p-0 hover:bg-sky-100 dark:hover:bg-sky-900 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={() => setEditingDropdown({ field, newValue: "" })}
-        >
-          <Plus className="h-4 w-4 text-sky-600" />
-        </Button>
+      <div className="relative group cursor-pointer" onClick={() => setEditingCell({ rowIndex, field })}>
+        <div className="w-full h-12 flex items-center px-4 bg-slate-50 dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-600 transition-all group-hover:shadow-md">
+          <span className="text-slate-700 dark:text-slate-300 font-medium flex-1">
+            {value || <span className="text-slate-400 dark:text-slate-500 italic">Click to select...</span>}
+          </span>
+          <Edit3 className="h-4 w-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
       </div>
     )
   }
@@ -607,8 +696,8 @@ export default function StrategyInputForm({
                     onClick={() => handleInstrumentButtonClick(buyingOption)}
                     className={`h-10 px-3 text-xs font-semibold transition-all duration-200 ${
                       instrument === buyingOption
-                        ? "bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white shadow-lg scale-105"
-                        : "border-2 border-orange-200 hover:border-orange-400 hover:bg-orange-50 text-orange-600 hover:text-orange-700 hover:scale-105"
+                        ? getInstrumentColor(buyingOption, true) + " text-white shadow-lg scale-105"
+                        : getInstrumentColor(buyingOption, false) + " hover:scale-105"
                     } rounded-lg whitespace-nowrap`}
                   >
                     {buyingOption}
@@ -720,6 +809,7 @@ export default function StrategyInputForm({
                     onClick={() => {
                       setShowManualEntryModal(false)
                       setEditingRowIndex(null)
+                      setEditingCell(null)
                     }}
                     className="text-white hover:bg-white hover:bg-opacity-20"
                   >
@@ -797,65 +887,33 @@ export default function StrategyInputForm({
                                   key={field}
                                   className="px-6 py-4 border-r border-slate-200 dark:border-slate-600 last:border-r-0"
                                 >
-                                  {editingRowIndex === index ? (
-                                    renderDropdownWithEdit(
-                                      field as keyof typeof dropdownOptions,
-                                      row[field as keyof FormInputData],
-                                      (value) => updateRowData(index, field as keyof FormInputData, value),
-                                      field,
-                                    )
-                                  ) : (
-                                    <div className="h-12 flex items-center">
-                                      <span className="text-slate-700 dark:text-slate-300 font-medium">
-                                        {row[field as keyof FormInputData] || (
-                                          <span className="text-slate-400 italic">Not set</span>
-                                        )}
-                                      </span>
-                                    </div>
+                                  {renderAdvancedDropdownWithEdit(
+                                    field as keyof typeof dropdownOptions,
+                                    row[field as keyof FormInputData],
+                                    (value) => updateRowData(index, field as keyof FormInputData, value),
+                                    index,
                                   )}
                                 </td>
                               ))}
                               <td className="px-6 py-4">
                                 <div className="flex items-center space-x-2">
-                                  {editingRowIndex === index ? (
-                                    <>
-                                      <Button
-                                        onClick={() => saveRow(index)}
-                                        size="sm"
-                                        className="bg-green-600 hover:bg-green-700 text-white shadow-md"
-                                      >
-                                        <Save className="h-4 w-4 mr-1" />
-                                        Save
-                                      </Button>
-                                      <Button
-                                        onClick={() => setEditingRowIndex(null)}
-                                        size="sm"
-                                        variant="outline"
-                                        className="border-slate-300 hover:bg-slate-50"
-                                      >
-                                        Cancel
-                                      </Button>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Button
-                                        onClick={() => editRow(index)}
-                                        size="sm"
-                                        variant="outline"
-                                        className="border-blue-300 text-blue-600 hover:bg-blue-50"
-                                      >
-                                        Edit
-                                      </Button>
-                                      <Button
-                                        onClick={() => deleteRow(index)}
-                                        size="sm"
-                                        variant="outline"
-                                        className="border-red-300 text-red-600 hover:bg-red-50"
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    </>
-                                  )}
+                                  <Button
+                                    onClick={() => duplicateRow(index)}
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                                  >
+                                    <Settings className="h-4 w-4 mr-1" />
+                                    Duplicate
+                                  </Button>
+                                  <Button
+                                    onClick={() => deleteRow(index)}
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-red-300 text-red-600 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
                                 </div>
                               </td>
                             </tr>
@@ -910,6 +968,7 @@ export default function StrategyInputForm({
                       onClick={() => {
                         setShowManualEntryModal(false)
                         setEditingRowIndex(null)
+                        setEditingCell(null)
                       }}
                       size="lg"
                       className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg"

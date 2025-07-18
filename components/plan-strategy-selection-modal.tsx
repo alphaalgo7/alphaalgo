@@ -1,175 +1,196 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { X, Search } from "lucide-react"
-import type { StrategyConfigRow } from "@/lib/types"
+import { Checkbox } from "@/components/ui/checkbox"
+import { X, Target, CheckCircle } from "lucide-react"
+import type { GeneratedStrategyRow } from "@/lib/types"
 
 interface PlanStrategySelectionModalProps {
   isOpen: boolean
   onClose: () => void
-  strategyData: StrategyConfigRow[]
-  onSelectionChange: (selectedStrategies: string[]) => void
+  configurations: GeneratedStrategyRow[]
+  onSelectionChange: (selectedIds: string[]) => void
 }
 
 export default function PlanStrategySelectionModal({
   isOpen,
   onClose,
-  strategyData,
+  configurations,
   onSelectionChange,
 }: PlanStrategySelectionModalProps) {
   const [selectedStrategies, setSelectedStrategies] = useState<Set<string>>(new Set())
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterPlan, setFilterPlan] = useState<string>("all")
-
-  useEffect(() => {
-    onSelectionChange(Array.from(selectedStrategies))
-  }, [selectedStrategies, onSelectionChange])
 
   if (!isOpen) return null
 
-  const filteredStrategies = strategyData.filter((strategy) => {
-    const matchesSearch = strategy.StrategyTag.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesPlan = filterPlan === "all" || strategy.StrategyTag.includes(`PLAN${filterPlan}`)
-    return matchesSearch && matchesPlan
-  })
+  // Group configurations by plan letter
+  const groupedByPlan = configurations.reduce(
+    (acc, config) => {
+      if (!acc[config.planLetter]) {
+        acc[config.planLetter] = []
+      }
+      acc[config.planLetter].push(config)
+      return acc
+    },
+    {} as Record<string, GeneratedStrategyRow[]>,
+  )
 
-  const handleStrategyToggle = (strategyTag: string) => {
+  const handleStrategyToggle = (strategyId: string) => {
     const newSelected = new Set(selectedStrategies)
-    if (newSelected.has(strategyTag)) {
-      newSelected.delete(strategyTag)
+    if (newSelected.has(strategyId)) {
+      newSelected.delete(strategyId)
     } else {
-      newSelected.add(strategyTag)
+      newSelected.add(strategyId)
     }
     setSelectedStrategies(newSelected)
   }
 
-  const handleSelectAll = () => {
-    const allTags = filteredStrategies.map((s) => s.StrategyTag)
-    setSelectedStrategies(new Set(allTags))
+  const handlePlanToggle = (planLetter: string, selectAll: boolean) => {
+    const planStrategies = groupedByPlan[planLetter]
+    const newSelected = new Set(selectedStrategies)
+
+    planStrategies.forEach((strategy) => {
+      if (selectAll) {
+        newSelected.add(strategy.id)
+      } else {
+        newSelected.delete(strategy.id)
+      }
+    })
+
+    setSelectedStrategies(newSelected)
   }
 
-  const handleClearAll = () => {
-    setSelectedStrategies(new Set())
+  const handleApplySelection = () => {
+    onSelectionChange(Array.from(selectedStrategies))
+    onClose()
   }
 
-  const getPlanColor = (strategyTag: string) => {
-    if (strategyTag.includes("PLANA")) return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-    if (strategyTag.includes("PLANB")) return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-    if (strategyTag.includes("PLANC")) return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
-    return "bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200"
+  const isPlanFullySelected = (planLetter: string) => {
+    const planStrategies = groupedByPlan[planLetter]
+    return planStrategies.every((strategy) => selectedStrategies.has(strategy.id))
+  }
+
+  const isPlanPartiallySelected = (planLetter: string) => {
+    const planStrategies = groupedByPlan[planLetter]
+    return planStrategies.some((strategy) => selectedStrategies.has(strategy.id)) && !isPlanFullySelected(planLetter)
   }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-xl font-semibold">Select Strategies</CardTitle>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
+        <CardHeader className="border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Target className="h-6 w-6 text-blue-600" />
+              <CardTitle className="text-xl font-semibold text-slate-800 dark:text-slate-100">
+                Select Strategies by Plan
+              </CardTitle>
+            </div>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Search and Filter */}
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <Label htmlFor="search" className="text-sm font-medium">
-                Search Strategies
-              </Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  id="search"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by strategy tag..."
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="filter" className="text-sm font-medium">
-                Filter by Plan
-              </Label>
-              <select
-                id="filter"
-                value={filterPlan}
-                onChange={(e) => setFilterPlan(e.target.value)}
-                className="w-full h-10 px-3 border border-slate-300 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800"
-              >
-                <option value="all">All Plans</option>
-                <option value="A">Plan A</option>
-                <option value="B">Plan B</option>
-                <option value="C">Plan C</option>
-              </select>
-            </div>
-          </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleSelectAll}>
-              Select All ({filteredStrategies.length})
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleClearAll}>
-              Clear All
-            </Button>
-            <div className="ml-auto text-sm text-slate-600 dark:text-slate-400">{selectedStrategies.size} selected</div>
-          </div>
+        <CardContent className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+          <div className="space-y-6">
+            {Object.entries(groupedByPlan).map(([planLetter, strategies]) => (
+              <div key={planLetter} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      checked={isPlanFullySelected(planLetter)}
+                      onCheckedChange={(checked) => handlePlanToggle(planLetter, checked as boolean)}
+                      className={isPlanPartiallySelected(planLetter) ? "data-[state=checked]:bg-blue-600" : ""}
+                    />
+                    <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Plan {planLetter}</h3>
+                    <Badge variant="secondary" className="text-xs">
+                      {strategies.length} strategies
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {strategies.filter((s) => selectedStrategies.has(s.id)).length} selected
+                    </Badge>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handlePlanToggle(planLetter, true)}>
+                      Select All
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handlePlanToggle(planLetter, false)}>
+                      Deselect All
+                    </Button>
+                  </div>
+                </div>
 
-          {/* Strategy List */}
-          <div className="border border-slate-200 dark:border-slate-700 rounded-lg max-h-96 overflow-y-auto">
-            {filteredStrategies.length === 0 ? (
-              <div className="p-8 text-center text-slate-500 dark:text-slate-400">
-                No strategies found matching your criteria.
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-200 dark:divide-slate-700">
-                {filteredStrategies.map((strategy) => (
-                  <div
-                    key={strategy.StrategyTag}
-                    className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
-                    onClick={() => handleStrategyToggle(strategy.StrategyTag)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedStrategies.has(strategy.StrategyTag)}
-                          onChange={() => handleStrategyToggle(strategy.StrategyTag)}
-                          className="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
-                        />
-                        <div>
-                          <Badge className={getPlanColor(strategy.StrategyTag)}>{strategy.StrategyTag}</Badge>
-                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                            User: {strategy["User Account"]} | Max Profit: {strategy["Max Profit"]}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {strategies.map((strategy) => (
+                    <div
+                      key={strategy.id}
+                      className={`border rounded-lg p-3 cursor-pointer transition-all ${
+                        selectedStrategies.has(strategy.id)
+                          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                          : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
+                      }`}
+                      onClick={() => handleStrategyToggle(strategy.id)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Checkbox
+                              checked={selectedStrategies.has(strategy.id)}
+                              onCheckedChange={() => handleStrategyToggle(strategy.id)}
+                            />
+                            <Badge variant="secondary" className="text-xs">
+                              {strategy.strategyType}
+                            </Badge>
+                          </div>
+                          <div className="space-y-1 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-slate-600 dark:text-slate-400">Trading Acc:</span>
+                              <span className="text-slate-800 dark:text-slate-200">{strategy.tradingAcc}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-600 dark:text-slate-400">Main Basket:</span>
+                              <span className="text-slate-800 dark:text-slate-200">{strategy.mainBasket}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-600 dark:text-slate-400">Max Profit:</span>
+                              <span className="text-slate-800 dark:text-slate-200">{strategy.dayMaxProfit}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="text-right text-xs text-slate-500 dark:text-slate-400">
-                        <div>Enabled: {strategy.Enabled}</div>
-                        <div>Trades: {strategy["Allowed Trades"]}</div>
+                        {selectedStrategies.has(strategy.id) && (
+                          <CheckCircle className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                        )}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button onClick={onClose} className="bg-blue-600 hover:bg-blue-700 text-white">
-              Apply Selection ({selectedStrategies.size})
-            </Button>
+            ))}
           </div>
         </CardContent>
+
+        <div className="border-t border-slate-200 dark:border-slate-700 p-6">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-slate-600 dark:text-slate-400">
+              {selectedStrategies.size} of {configurations.length} strategies selected
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleApplySelection}
+                disabled={selectedStrategies.size === 0}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Apply Selection ({selectedStrategies.size})
+              </Button>
+            </div>
+          </div>
+        </div>
       </Card>
     </div>
   )
